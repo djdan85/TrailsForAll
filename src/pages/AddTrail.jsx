@@ -1,22 +1,22 @@
-import React, { useState } from "react";
+import React from "react";
 
 export default function AddTrail() {
-  const [name, setName] = useState("");
-  const [file, setFile] = useState(null);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    alert("Trail submitted: " + name);
-  };
-
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Add New Trail</h2>
-      <label>Trail Name:</label>
-      <input value={name} onChange={(e) => setName(e.target.value)} required />
-      <label>Upload GPX:</label>
-      <input type="file" accept=".gpx" onChange={(e) => setFile(e.target.files[0])} required />
-      <button type="submit">Submit</button>
-    </form>
+    <div>
+      <h2>Přidat nový trail</h2>
+      <form>
+        <label>Název traily: <input type="text" /></label><br />
+        <label>Délka v km: <input type="number" /></label><br />
+        <label>Náročnost: 
+          <select>
+            <option>Easy</option>
+            <option>Intermediate</option>
+            <option>Hard</option>
+          </select>
+        </label><br />
+        <label>GPX soubor: <input type="file" /></label><br />
+        <button type="submit">Odeslat</button>
+      </form>
+    </div>
   );
 }
