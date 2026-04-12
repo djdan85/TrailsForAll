@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic'
 const Map = dynamic(() => import('./components/Map'), { ssr: false })
 
 export default function Home() {
-  const [trails, setTrails] = useState([])
+  const [trails, setTrails] = useState<any[]>([])
 
   useEffect(() => {
     const fetchTrails = async () => {
@@ -17,7 +17,7 @@ export default function Home() {
         .eq('status', 'approved')
       
       if (error) console.error(error)
-      else setTrails(data)
+      else setTrails(data || [])
     }
 
     fetchTrails()
