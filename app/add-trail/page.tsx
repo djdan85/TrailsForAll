@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
+import ImageUpload from '../components/ImageUpload'
 
 export default function AddTrail() {
   const router = useRouter()
@@ -68,7 +69,7 @@ export default function AddTrail() {
     })
 
     if (error) setMessage('Chyba: ' + error.message)
-    else setMessage('Trail byl odeslan ke schvaleni!')
+    else setMessage('Trail byl odeslán ke schválení!')
 
     setLoading(false)
   }
@@ -76,19 +77,19 @@ export default function AddTrail() {
   return (
     <div className="min-h-screen bg-gray-950 pt-24 px-4 pb-10">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-white mb-2">Pridat trail</h1>
-        <p className="text-gray-400 mb-8">Trail bude po odeslani cekat na schvaleni adminem.</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Přidat trail</h1>
+        <p className="text-gray-400 mb-8">Trail bude po odeslání čekat na schválení adminem.</p>
 
         <div className="bg-gray-900 rounded-2xl p-6 flex flex-col gap-4">
 
           <div>
-            <label className="text-gray-400 text-sm mb-1 block">Nazev trailu</label>
+            <label className="text-gray-400 text-sm mb-1 block">Název trailu</label>
             <input
               name="name"
               value={form.name}
               onChange={handleChange}
               className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-              placeholder="Nazev trailu"
+              placeholder="Název trailu"
             />
           </div>
 
@@ -100,27 +101,27 @@ export default function AddTrail() {
               onChange={handleChange}
               rows={4}
               className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-              placeholder="Popis trailu..."
+              placeholder="Popiš trail..."
             />
           </div>
 
           <div>
-            <label className="text-gray-400 text-sm mb-1 block">Narocnost</label>
+            <label className="text-gray-400 text-sm mb-1 block">Náročnost</label>
             <select
               name="difficulty"
               value={form.difficulty}
               onChange={handleChange}
               className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
             >
-              <option value="easy">Lehka</option>
-              <option value="medium">Stredni</option>
-              <option value="hard">Tezka</option>
-              <option value="expert">Expert</option>
+              <option value="easy">🟢 Lehká</option>
+              <option value="medium">🟡 Střední</option>
+              <option value="hard">🔴 Těžká</option>
+              <option value="expert">⚫ Expert</option>
             </select>
           </div>
 
           <div>
-            <label className="text-gray-400 text-sm mb-1 block">Delka (km)</label>
+            <label className="text-gray-400 text-sm mb-1 block">Délka (km)</label>
             <input
               name="length_km"
               value={form.length_km}
@@ -138,14 +139,14 @@ export default function AddTrail() {
               value={form.location_name}
               onChange={handleChange}
               className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-              placeholder="Mesto, Region"
+              placeholder="Město, Region"
             />
           </div>
 
           <div>
             <label className="text-gray-400 text-sm mb-1 block">
-              Souradnice
-              <span className="text-gray-600 ml-1">(zkopiruj z Google Maps, napr. 49.7890581, 13.4054814)</span>
+              Souřadnice
+              <span className="text-gray-600 ml-1">(zkopíruj z Google Maps, např. 49.7890581, 13.4054814)</span>
             </label>
             <input
               name="coords"
@@ -159,31 +160,22 @@ export default function AddTrail() {
             )}
           </div>
 
-          <div>
-            <label className="text-gray-400 text-sm mb-1 block">
-              Fotografie
-              <span className="text-gray-600 ml-1">(URL odkaz na foto, nepovinne)</span>
-            </label>
-            <input
-              name="photo_url"
-              value={form.photo_url}
-              onChange={handleChange}
-              className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-              placeholder="https://..."
-            />
-          </div>
+          <ImageUpload
+            label="Fotografie trailu (nepovinné)"
+            onUpload={url => setForm(prev => ({ ...prev, photo_url: url }))}
+          />
 
           <div>
             <label className="text-gray-400 text-sm mb-1 block">
-              Google Maps odkaz
-              <span className="text-gray-600 ml-1">(nepovinne)</span>
+              Mapy.com odkaz
+              <span className="text-gray-600 ml-1">(nepovinné)</span>
             </label>
             <input
               name="maps_url"
               value={form.maps_url}
               onChange={handleChange}
               className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-              placeholder="https://maps.google.com/..."
+              placeholder="https://mapy.com/..."
             />
           </div>
 
@@ -196,7 +188,7 @@ export default function AddTrail() {
             disabled={loading}
             className="w-full bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition disabled:opacity-50"
           >
-            {loading ? 'Odesilam...' : 'Odeslat ke schvaleni'}
+            {loading ? 'Odesílám...' : 'Odeslat ke schválení'}
           </button>
 
         </div>

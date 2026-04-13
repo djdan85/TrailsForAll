@@ -39,7 +39,7 @@ export default function Navbar() {
     router.push('/')
   }
 
-  const isAdmin = user?.email === 'dalibor.pasek@gmail.com' || profile?.role === 'admin' || profile?.role === 'moderator'
+  const isAdmin = profile?.role && ['admin', 'superadmin', 'moderator'].includes(profile.role)
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-[1000] bg-black shadow-md">
@@ -55,6 +55,12 @@ export default function Navbar() {
           </Link>
           <Link href="/trails" className="text-white hover:text-orange-500 transition">
             Traily
+          </Link>
+          <Link href="/clanky" className="text-white hover:text-orange-500 transition">
+            Články
+          </Link>
+          <Link href="/komunita" className="text-white hover:text-orange-500 transition">
+            Komunita
           </Link>
           <Link href="/o-nas" className="text-white hover:text-orange-500 transition">
             O nás
@@ -107,6 +113,12 @@ export default function Navbar() {
           </Link>
           <Link href="/trails" className="text-white hover:text-orange-500" onClick={() => setMenuOpen(false)}>
             Traily
+          </Link>
+          <Link href="/clanky" className="text-white hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+            Články
+          </Link>
+          <Link href="/komunita" className="text-white hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+            Komunita
           </Link>
           <Link href="/o-nas" className="text-white hover:text-orange-500" onClick={() => setMenuOpen(false)}>
             O nás

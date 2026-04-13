@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
+import ImageUpload from '../components/ImageUpload'
 
 const ADMIN_EMAIL = 'dalibor.pasek@gmail.com'
 
@@ -14,7 +15,7 @@ export default function Admin() {
   const [reviews, setReviews] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [tab, setTab] = useState<'trails' | 'reviews'>('trails')
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending')
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'deleted'>('pending')
   const [loading, setLoading] = useState(true)
   const [editingTrail, setEditingTrail] = useState<any>(null)
 
@@ -32,7 +33,7 @@ export default function Admin() {
         .eq('id', data.user.id)
         .single()
 
-      if (!profileData || (profileData.role !== 'moderator' && profileData.role !== 'admin' && data.user.email !== ADMIN_EMAIL)) {
+      if (!profileData || (!['moderator', 'admin', 'superadmin'].includes(profileData.role) && data.user.email !== ADMIN_EMAIL)) {
         router.push('/')
         return
       }
@@ -46,7 +47,7 @@ export default function Admin() {
 
   const fetchAll = async () => {
     const { data: trailsData } = await supabase
-      .from('trails')
+      .from('trails_with_profiles')
       .select('*')
       .order('created_at', { ascending: false })
 
@@ -70,6 +71,7 @@ export default function Admin() {
     const updateData: any = { status }
     if (status === 'approved') {
       updateData.approved_at = new Date().toISOString()
+      updateData.approved_by = user.id
     }
     await supabase.from('trails').update(updateData).eq('id', id)
     fetchAll()
@@ -77,6 +79,18 @@ export default function Admin() {
 
   const updateReviewStatus = async (id: string, status: string) => {
     await supabase.from('reviews').update({ status }).eq('id', id)
+    fetchAll()
+  }
+
+  const deleteTrailPermanently = async (id: string) => {
+    if (!confirm('Opravdu chceš trvale smazat tento trail? Tato akce je nevratná.')) return
+    await supabase.from('trails').delete().eq('id', id)
+    fetchAll()
+  }
+
+  const deleteReviewPermanently = async (id: string) => {
+    if (!confirm('Opravdu chceš trvale smazat tuto recenzi? Tato akce je nevratná.')) return
+    await supabase.from('reviews').delete().eq('id', id)
     fetchAll()
   }
 
@@ -107,6 +121,7 @@ export default function Admin() {
         photo_url: editingTrail.photo_url || null,
         maps_url: editingTrail.maps_url || null,
         updated_at: new Date().toISOString(),
+        updated_by: user.id,
       })
       .eq('id', editingTrail.id)
 
@@ -116,23 +131,23 @@ export default function Admin() {
     }
   }
 
-  const isSuper = user?.email === ADMIN_EMAIL || profile?.role === 'admin'
-  const isModerator = profile?.role === 'moderator'
+  const isSuper = user?.email === ADMIN_EMAIL || profile?.role === 'admin' || profile?.role === 'superadmin'
 
   const filteredTrails = filter === 'all'
-    ? trails
+    ? trails.filter(t => t.status !== 'deleted')
     : trails.filter(t => t.status === filter)
 
   const statusLabel: any = {
-    pending: 'Ceka na schvaleni',
-    approved: 'Schvaleno',
-    rejected: 'Zamitnuto'
+    pending: 'Čeká na schválení',
+    approved: 'Schváleno',
+    rejected: 'Zamítnuto',
+    deleted: 'Smazáno'
   }
 
   const difficultyLabel: any = {
-    easy: 'Lehka',
-    medium: 'Stredni',
-    hard: 'Tezka',
+    easy: 'Lehká',
+    medium: 'Střední',
+    hard: 'Těžká',
     expert: 'Expert'
   }
 
@@ -149,7 +164,7 @@ export default function Admin() {
 
   if (loading) return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-      <p className="text-orange-500 text-xl">Nacitam...</p>
+      <p className="text-orange-500 text-xl">Načítám...</p>
     </div>
   )
 
@@ -159,10 +174,10 @@ export default function Admin() {
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-3xl font-bold text-white">Admin panel</h1>
           <span className={`text-xs px-3 py-1 rounded-full font-semibold ${isSuper ? 'bg-orange-900 text-orange-300' : 'bg-blue-900 text-blue-300'}`}>
-            {isSuper ? 'Super Admin' : 'Moderator'}
+            {isSuper ? 'Admin' : 'Moderátor'}
           </span>
         </div>
-        <p className="text-gray-400 mb-4">Sprava trailu a recenzi.</p>
+        <p className="text-gray-400 mb-4">Správa trailů a recenzí.</p>
 
         {isSuper && (
           <div className="mb-6">
@@ -170,7 +185,7 @@ export default function Admin() {
               onClick={() => router.push('/admin/users')}
               className="bg-gray-800 text-white px-6 py-2 rounded-xl text-sm hover:bg-gray-700 transition"
             >
-              Sprava uzivatelu ({users.length})
+              Správa uživatelů ({users.length})
             </button>
           </div>
         )}
@@ -193,21 +208,25 @@ export default function Admin() {
         {tab === 'trails' && (
           <>
             <div className="flex gap-2 mb-6 flex-wrap">
-              {(['pending', 'all', 'approved', 'rejected'] as const).map((f) => (
+              {(['pending', 'all', 'approved', 'rejected', 'deleted'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${filter === f ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
                 >
-                  {f === 'all' ? 'Vsechny' : f === 'pending' ? `Ke schvaleni (${trails.filter(t => t.status === 'pending').length})` : f === 'approved' ? 'Schvalene' : 'Zamitnute'}
+                  {f === 'all' ? 'Všechny' :
+                   f === 'pending' ? `Ke schválení (${trails.filter(t => t.status === 'pending').length})` :
+                   f === 'approved' ? 'Schválené' :
+                   f === 'rejected' ? 'Zamítnuté' :
+                   `Koš (${trails.filter(t => t.status === 'deleted').length})`}
                 </button>
               ))}
             </div>
 
             <div className="flex flex-col gap-4">
-              {filteredTrails.length === 0 && <p className="text-gray-400">Zadne traily.</p>}
+              {filteredTrails.length === 0 && <p className="text-gray-400">Žádné traily.</p>}
               {filteredTrails.map((trail) => (
-                <div key={trail.id} className="bg-gray-900 rounded-2xl p-6">
+                <div key={trail.id} className={`rounded-2xl p-6 ${trail.status === 'deleted' ? 'bg-red-950 border border-red-900' : 'bg-gray-900'}`}>
                   {editingTrail?.id === trail.id ? (
                     <div className="flex flex-col gap-3">
                       <h2 className="text-orange-500 font-bold text-lg mb-1">Editace trailu</h2>
@@ -215,7 +234,7 @@ export default function Admin() {
                         className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500"
                         value={editingTrail.name}
                         onChange={e => setEditingTrail({...editingTrail, name: e.target.value})}
-                        placeholder="Nazev"
+                        placeholder="Název"
                       />
                       <textarea
                         className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500"
@@ -229,16 +248,16 @@ export default function Admin() {
                         value={editingTrail.difficulty}
                         onChange={e => setEditingTrail({...editingTrail, difficulty: e.target.value})}
                       >
-                        <option value="easy">Lehka</option>
-                        <option value="medium">Stredni</option>
-                        <option value="hard">Tezka</option>
+                        <option value="easy">Lehká</option>
+                        <option value="medium">Střední</option>
+                        <option value="hard">Těžká</option>
                         <option value="expert">Expert</option>
                       </select>
                       <input
                         className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500"
                         value={editingTrail.length_km}
                         onChange={e => setEditingTrail({...editingTrail, length_km: e.target.value})}
-                        placeholder="Delka (km)"
+                        placeholder="Délka (km)"
                         type="number"
                       />
                       <input
@@ -249,8 +268,8 @@ export default function Admin() {
                       />
                       <div>
                         <label className="text-gray-400 text-sm mb-1 block">
-                          Souradnice
-                          <span className="text-gray-600 ml-1">(napr. 49.7890581, 13.4054814)</span>
+                          Souřadnice
+                          <span className="text-gray-600 ml-1">(např. 49.7890581, 13.4054814)</span>
                         </label>
                         <input
                           className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500 w-full"
@@ -262,24 +281,33 @@ export default function Admin() {
                           <p className="text-gray-600 text-xs mt-1">Lat: {editingTrail.lat} / Lng: {editingTrail.lng}</p>
                         )}
                       </div>
-                      <input
-                        className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500"
-                        value={editingTrail.photo_url || ''}
-                        onChange={e => setEditingTrail({...editingTrail, photo_url: e.target.value})}
-                        placeholder="URL fotografie"
+                      <ImageUpload
+                        label="Fotografie trailu"
+                        onUpload={url => setEditingTrail({...editingTrail, photo_url: url})}
                       />
+                      {editingTrail.photo_url && (
+                        <div className="flex items-center gap-2">
+                          <p className="text-gray-400 text-xs">Aktuální foto: {editingTrail.photo_url.substring(0, 50)}...</p>
+                          <button
+                            onClick={() => setEditingTrail({...editingTrail, photo_url: ''})}
+                            className="text-red-400 text-xs hover:text-red-300"
+                          >
+                            Odstranit
+                          </button>
+                        </div>
+                      )}
                       <input
                         className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500"
                         value={editingTrail.maps_url || ''}
                         onChange={e => setEditingTrail({...editingTrail, maps_url: e.target.value})}
-                        placeholder="Odkaz na Google Maps"
+                        placeholder="Odkaz na Mapy.com"
                       />
                       <div className="flex gap-3 mt-2">
                         <button onClick={saveTrailEdit} className="bg-orange-500 text-white px-6 py-2 rounded-xl text-sm hover:bg-orange-600 transition">
-                          Ulozit
+                          Uložit
                         </button>
                         <button onClick={() => setEditingTrail(null)} className="bg-gray-700 text-white px-6 py-2 rounded-xl text-sm hover:bg-gray-600 transition">
-                          Zrusit
+                          Zrušit
                         </button>
                       </div>
                     </div>
@@ -293,43 +321,69 @@ export default function Admin() {
                         <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
                           trail.status === 'pending' ? 'bg-yellow-900 text-yellow-400' :
                           trail.status === 'approved' ? 'bg-green-900 text-green-400' :
-                          'bg-red-900 text-red-400'
+                          trail.status === 'deleted' ? 'bg-red-900 text-red-400' :
+                          'bg-gray-700 text-gray-400'
                         }`}>
                           {statusLabel[trail.status]}
                         </span>
                       </div>
+                      {trail.photo_url && (
+                        <img src={trail.photo_url} alt={trail.name} className="w-full h-40 object-cover rounded-xl mb-3" />
+                      )}
                       <p className="text-gray-300 text-sm mb-3">{trail.description}</p>
                       <div className="flex gap-3 text-sm text-gray-400 mb-3 flex-wrap">
                         <span>{difficultyLabel[trail.difficulty]}</span>
                         <span>·</span>
                         <span>{trail.length_km} km</span>
-                        {trail.photo_url && <span>· Foto</span>}
                         {trail.maps_url && <span>· Maps</span>}
                       </div>
                       <div className="flex flex-col gap-1 mb-4">
-                        <p className="text-gray-600 text-xs">Pridano: {formatDate(trail.created_at)}</p>
-                        {trail.approved_at && <p className="text-gray-600 text-xs">Schvaleno: {formatDate(trail.approved_at)}</p>}
-                        {trail.updated_at && <p className="text-gray-600 text-xs">Upraveno: {formatDate(trail.updated_at)}</p>}
+                        <p className="text-gray-600 text-xs">
+                          Přidal: {trail.created_by_username || 'Neznámý'} — {formatDate(trail.created_at)}
+                        </p>
+                        {trail.approved_at && (
+                          <p className="text-gray-600 text-xs">
+                            Schválil: {trail.approved_by_username || 'Admin'} — {formatDate(trail.approved_at)}
+                          </p>
+                        )}
+                        {trail.updated_at && (
+                          <p className="text-gray-600 text-xs">
+                            Upravil: {trail.updated_by_username || 'Admin'} — {formatDate(trail.updated_at)}
+                          </p>
+                        )}
                       </div>
                       <div className="flex gap-3 flex-wrap">
-                        {trail.status !== 'approved' && (
-                          <button onClick={() => updateTrailStatus(trail.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">
-                            Schvalit
-                          </button>
+                        {trail.status === 'deleted' ? (
+                          <>
+                            <button onClick={() => updateTrailStatus(trail.id, 'pending')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">
+                              Obnovit
+                            </button>
+                            {isSuper && (
+                              <button onClick={() => deleteTrailPermanently(trail.id)} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">
+                                Trvale smazat
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {trail.status !== 'approved' && (
+                              <button onClick={() => updateTrailStatus(trail.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">
+                                Schválit
+                              </button>
+                            )}
+                            {trail.status !== 'rejected' && (
+                              <button onClick={() => updateTrailStatus(trail.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">
+                                Zamítnout
+                              </button>
+                            )}
+                            <button onClick={() => setEditingTrail({...trail, coords: `${trail.lat}, ${trail.lng}`})} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition">
+                              Upravit
+                            </button>
+                            <button onClick={() => updateTrailStatus(trail.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">
+                              Do koše
+                            </button>
+                          </>
                         )}
-                        {trail.status !== 'rejected' && (
-                          <button onClick={() => updateTrailStatus(trail.id, 'rejected')} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">
-                            Zamítnout
-                          </button>
-                        )}
-                        {trail.status !== 'pending' && (
-                          <button onClick={() => updateTrailStatus(trail.id, 'pending')} className="bg-gray-700 text-white px-4 py-2 rounded-xl text-sm hover:bg-gray-600 transition">
-                            Vratit cekani
-                          </button>
-                        )}
-                        <button onClick={() => setEditingTrail({...trail, coords: `${trail.lat}, ${trail.lng}`})} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition">
-                          Upravit
-                        </button>
                       </div>
                     </>
                   )}
@@ -341,33 +395,52 @@ export default function Admin() {
 
         {tab === 'reviews' && (
           <div className="flex flex-col gap-4">
-            {reviews.length === 0 && <p className="text-gray-400">Zadne recenze.</p>}
+            {reviews.filter(r => r.status !== 'deleted').length === 0 && <p className="text-gray-400">Žádné recenze.</p>}
             {reviews.map((review) => (
-              <div key={review.id} className="bg-gray-900 rounded-2xl p-6">
+              <div key={review.id} className={`rounded-2xl p-6 ${review.status === 'deleted' ? 'bg-red-950 border border-red-900' : 'bg-gray-900'}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <span className="text-orange-500 font-semibold">{review.rating} hvezdicky</span>
+                    <span className="text-orange-500 font-semibold">{review.rating} hvězdičky</span>
                     <p className="text-gray-400 text-xs mt-1">{formatDate(review.created_at)}</p>
                   </div>
                   <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
                     review.status === 'pending' ? 'bg-yellow-900 text-yellow-400' :
                     review.status === 'approved' ? 'bg-green-900 text-green-400' :
-                    'bg-red-900 text-red-400'
+                    review.status === 'deleted' ? 'bg-red-900 text-red-400' :
+                    'bg-gray-700 text-gray-400'
                   }`}>
                     {statusLabel[review.status]}
                   </span>
                 </div>
                 <p className="text-white text-sm mb-4">{review.comment}</p>
-                <div className="flex gap-3">
-                  {review.status !== 'approved' && (
-                    <button onClick={() => updateReviewStatus(review.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">
-                      Schvalit
-                    </button>
-                  )}
-                  {review.status !== 'rejected' && (
-                    <button onClick={() => updateReviewStatus(review.id, 'rejected')} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">
-                      Zamítnout
-                    </button>
+                <div className="flex gap-3 flex-wrap">
+                  {review.status === 'deleted' ? (
+                    <>
+                      <button onClick={() => updateReviewStatus(review.id, 'pending')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">
+                        Obnovit
+                      </button>
+                      {isSuper && (
+                        <button onClick={() => deleteReviewPermanently(review.id)} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">
+                          Trvale smazat
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {review.status !== 'approved' && (
+                        <button onClick={() => updateReviewStatus(review.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">
+                          Schválit
+                        </button>
+                      )}
+                      {review.status !== 'rejected' && (
+                        <button onClick={() => updateReviewStatus(review.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">
+                          Zamítnout
+                        </button>
+                      )}
+                      <button onClick={() => updateReviewStatus(review.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">
+                        Do koše
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
