@@ -1,8 +1,8 @@
- 
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import Navbar from './components/Navbar'
+import CookieBanner from './components/CookieBanner'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Trails for All',
-  description: 'Komunitni mapa trailu pro bikery',
+  description: 'Komunitní mapa trailů pro bikery',
 }
 
 export default function RootLayout({
@@ -29,6 +29,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Navbar />
         {children}
+        <CookieBanner />
       </body>
     </html>
   )
