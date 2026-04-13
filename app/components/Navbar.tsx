@@ -56,6 +56,9 @@ export default function Navbar() {
           <Link href="/trails" className="text-white hover:text-orange-500 transition">
             Traily
           </Link>
+          <Link href="/o-nas" className="text-white hover:text-orange-500 transition">
+            O nás
+          </Link>
           <Link href="/add-trail" className="text-white hover:text-orange-500 transition">
             Přidat trail
           </Link>
@@ -104,6 +107,9 @@ export default function Navbar() {
           </Link>
           <Link href="/trails" className="text-white hover:text-orange-500" onClick={() => setMenuOpen(false)}>
             Traily
+          </Link>
+          <Link href="/o-nas" className="text-white hover:text-orange-500" onClick={() => setMenuOpen(false)}>
+            O nás
           </Link>
           <Link href="/add-trail" className="text-white hover:text-orange-500" onClick={() => setMenuOpen(false)}>
             Přidat trail
