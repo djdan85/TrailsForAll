@@ -24,53 +24,6 @@ const locationIcon = L.icon({
   popupAnchor: [1, -34],
 })
 
-function LocateButton({ onLocate }: { onLocate: (pos: [number, number]) => void }) {
-  const map = useMap()
-  const [locating, setLocating] = useState(false)
-
-  const handleLocate = () => {
-    setLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude]
-        map.flyTo(coords, 13, { animate: true, duration: 1.5 })
-        onLocate(coords)
-        setLocating(false)
-      },
-      () => {
-        alert('Nepodařilo se získat polohu. Zkontroluj oprávnění v prohlížeči.')
-        setLocating(false)
-      }
-    )
-  }
-
-  return (
-    <button
-      onClick={handleLocate}
-      disabled={locating}
-      className="leaflet-control"
-      style={{
-        position: 'absolute',
-        bottom: '80px',
-        left: '10px',
-        zIndex: 1000,
-        background: locating ? '#555' : '#f97316',
-        color: 'white',
-        border: '2px solid rgba(0,0,0,0.2)',
-        borderRadius: '8px',
-        padding: '8px 12px',
-        fontWeight: 'bold',
-        fontSize: '13px',
-        cursor: locating ? 'not-allowed' : 'pointer',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {locating ? '📡 Hledám...' : '📍 Moje poloha'}
-    </button>
-  )
-}
-
 function ZoomControl() {
   const map = useMap()
 
@@ -123,15 +76,42 @@ function ZoomControl() {
   )
 }
 
+function FlyToLocation({ coords }: { coords: [number, number] | null }) {
+  const map = useMap()
+  if (coords) {
+    map.flyTo(coords, 13, { animate: true, duration: 1.5 })
+  }
+  return null
+}
+
 export default function Map({ trails }: { trails: any[] }) {
   const router = useRouter()
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
+  const [locating, setLocating] = useState(false)
+  const [flyTo, setFlyTo] = useState<[number, number] | null>(null)
 
   const difficultyLabel: any = {
     easy: 'Lehká',
     medium: 'Střední',
     hard: 'Těžká',
     expert: 'Expert'
+  }
+
+  const handleLocate = () => {
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude]
+        setUserLocation(coords)
+        setFlyTo(coords)
+        setLocating(false)
+      },
+      () => {
+        alert('Nepodařilo se získat polohu. Povol přístup k poloze v prohlížeči.')
+        setLocating(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
   }
 
   return (
@@ -174,8 +154,33 @@ export default function Map({ trails }: { trails: any[] }) {
           </Marker>
         )}
         <ZoomControl />
-        <LocateButton onLocate={setUserLocation} />
+        <FlyToLocation coords={flyTo} />
       </MapContainer>
+
+      {/* Tlačítko polohy mimo mapu */}
+      <button
+        onClick={handleLocate}
+        disabled={locating}
+        style={{
+          position: 'absolute',
+          bottom: '80px',
+          left: '10px',
+          zIndex: 1000,
+          background: locating ? '#555' : '#f97316',
+          color: 'white',
+          border: '2px solid rgba(0,0,0,0.2)',
+          borderRadius: '8px',
+          padding: '8px 12px',
+          fontWeight: 'bold',
+          fontSize: '13px',
+          cursor: locating ? 'not-allowed' : 'pointer',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          whiteSpace: 'nowrap',
+          touchAction: 'manipulation',
+        }}
+      >
+        {locating ? '📡 Hledám...' : '📍 Moje poloha'}
+      </button>
     </div>
   )
 }
