@@ -64,13 +64,11 @@ export default function Home() {
                 onClick={() => router.push(`/trail/${trail.id}`)}
                 className="bg-gray-900 rounded-2xl overflow-hidden cursor-pointer hover:bg-gray-800 transition"
               >
-                {trail.photo_url && (
-                  <img
-                    src={trail.photo_url}
-                    alt={trail.name}
-                    className="w-full h-36 object-cover"
-                  />
-                )}
+               <img
+                  src={trail.photo_url || '/logo.png'}
+                  alt={trail.name}
+                  className="w-full h-36 object-cover bg-gray-800"
+                />
                 <div className="p-4">
                   <h3 className="text-white font-bold text-lg mb-1">{trail.name}</h3>
                   <p className="text-gray-400 text-sm mb-2">{trail.location_name}</p>

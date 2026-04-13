@@ -79,13 +79,11 @@ export default function Trails() {
               onClick={() => router.push(`/trail/${trail.id}`)}
               className="bg-gray-900 rounded-2xl overflow-hidden cursor-pointer hover:bg-gray-800 transition"
             >
-              {trail.photo_url && (
-                <img
-                  src={trail.photo_url}
+               <img
+                  src={trail.photo_url || '/logo.png'}
                   alt={trail.name}
-                  className="w-full h-40 object-cover"
+                  className="w-full h-36 object-cover bg-gray-800"
                 />
-              )}
               <div className="p-6">
                 <h2 className="text-white font-bold text-xl mb-1">{trail.name}</h2>
                 <p className="text-gray-400 text-sm mb-3">{trail.location_name}</p>

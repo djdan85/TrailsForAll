@@ -18,7 +18,7 @@ export default function TrailDetail() {
   useEffect(() => {
     const fetchData = async () => {
       const { data: trailData } = await supabase
-        .from('trails')
+        .from('trails_with_profiles')
         .select('*')
         .eq('id', id)
         .single()
@@ -60,15 +60,16 @@ export default function TrailDetail() {
     setComment('')
   }
 
-  const openMaps = () => {
-    if (trail.maps_url) window.open(trail.maps_url, '_blank')
-  }
-
   const difficultyLabel: any = {
     easy: '🟢 Lehká',
     medium: '🟡 Střední',
     hard: '🔴 Těžká',
     expert: '⚫ Expert'
+  }
+
+  const formatDate = (date: string) => {
+    if (!date) return null
+    return new Date(date).toLocaleDateString('cs-CZ')
   }
 
   if (loading) return (
@@ -94,51 +95,64 @@ export default function TrailDetail() {
           ← Zpět
         </button>
 
-        <div className="bg-gray-900 rounded-2xl p-6 shadow-lg mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">{trail.name}</h1>
-          <p className="text-gray-400 mb-6">{trail.location_name}</p>
+        <div className="bg-gray-900 rounded-2xl overflow-hidden shadow-lg mb-6">
+          <img
+            src={trail.photo_url || '/logo.png'}
+            alt={trail.name}
+            className="w-full h-56 object-cover bg-gray-800"
+          />
+          <div className="p-6">
+            <h1 className="text-3xl font-bold text-white mb-1">{trail.name}</h1>
+            <p className="text-gray-400 mb-6">{trail.location_name}</p>
 
-          {trail.photo_url && (
-            <div className="mb-6">
-              <img
-                src={trail.photo_url}
-                alt={trail.name}
-                className="w-full rounded-xl object-cover max-h-64"
-              />
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-gray-800 rounded-xl p-4">
+                <p className="text-gray-400 text-sm">Náročnost</p>
+                <p className="text-white font-semibold mt-1">
+                  {difficultyLabel[trail.difficulty]}
+                </p>
+              </div>
+              <div className="bg-gray-800 rounded-xl p-4">
+                <p className="text-gray-400 text-sm">Délka</p>
+                <p className="text-white font-semibold mt-1">{trail.length_km} km</p>
+              </div>
             </div>
-          )}
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-gray-800 rounded-xl p-4">
-              <p className="text-gray-400 text-sm">Náročnost</p>
-              <p className="text-white font-semibold mt-1">
-                {difficultyLabel[trail.difficulty]}
+            <div className="bg-gray-800 rounded-xl p-4 mb-4">
+              <p className="text-gray-400 text-sm mb-2">Popis</p>
+              <p className="text-white">{trail.description}</p>
+            </div>
+
+            <div className="bg-gray-800 rounded-xl p-4 mb-4">
+              <p className="text-gray-400 text-sm mb-2">Poloha</p>
+              <p className="text-white">{trail.lat}, {trail.lng}</p>
+            </div>
+
+            <div className="flex flex-col gap-1 mb-4">
+              <p className="text-gray-600 text-xs">
+                Přidal: {trail.created_by_username || 'Neznámý'} · {formatDate(trail.created_at)}
               </p>
+              {trail.approved_at && (
+                <p className="text-gray-600 text-xs">
+                  Schválil: {trail.approved_by_username || 'Admin'} · {formatDate(trail.approved_at)}
+                </p>
+              )}
+              {trail.updated_at && (
+                <p className="text-gray-600 text-xs">
+                  Upravil: {trail.updated_by_username || 'Admin'} · {formatDate(trail.updated_at)}
+                </p>
+              )}
             </div>
-            <div className="bg-gray-800 rounded-xl p-4">
-              <p className="text-gray-400 text-sm">Délka</p>
-              <p className="text-white font-semibold mt-1">{trail.length_km} km</p>
-            </div>
-          </div>
 
-          <div className="bg-gray-800 rounded-xl p-4 mb-4">
-            <p className="text-gray-400 text-sm mb-2">Popis</p>
-            <p className="text-white">{trail.description}</p>
+            {trail.maps_url && (
+              <button
+                onClick={() => window.open(trail.maps_url, '_blank')}
+                className="flex items-center justify-center gap-2 w-full bg-gray-800 text-white py-3 rounded-xl hover:bg-gray-700 transition"
+              >
+                🗺️ Zobrazit na Mapy.com
+              </button>
+            )}
           </div>
-
-          <div className="bg-gray-800 rounded-xl p-4 mb-4">
-            <p className="text-gray-400 text-sm mb-2">Poloha</p>
-            <p className="text-white">{trail.lat}, {trail.lng}</p>
-          </div>
-
-          {trail.maps_url && (
-            <button
-              onClick={openMaps}
-              className="flex items-center justify-center gap-2 w-full bg-gray-800 text-white py-3 rounded-xl hover:bg-gray-700 transition"
-            >
-              🗺️ Zobrazit na Mapy.com
-            </button>
-          )}
         </div>
 
         <div className="bg-gray-900 rounded-2xl p-6 mb-6">
