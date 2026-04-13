@@ -48,24 +48,78 @@ function LocateButton({ onLocate }: { onLocate: (pos: [number, number]) => void 
     <button
       onClick={handleLocate}
       disabled={locating}
+      className="leaflet-control"
       style={{
         position: 'absolute',
-        bottom: '20px',
-        right: '10px',
+        bottom: '80px',
+        left: '10px',
         zIndex: 1000,
         background: locating ? '#555' : '#f97316',
         color: 'white',
-        border: 'none',
-        borderRadius: '12px',
-        padding: '10px 16px',
+        border: '2px solid rgba(0,0,0,0.2)',
+        borderRadius: '8px',
+        padding: '8px 12px',
         fontWeight: 'bold',
-        fontSize: '14px',
+        fontSize: '13px',
         cursor: locating ? 'not-allowed' : 'pointer',
         boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+        whiteSpace: 'nowrap',
       }}
     >
       {locating ? '📡 Hledám...' : '📍 Moje poloha'}
     </button>
+  )
+}
+
+function ZoomControl() {
+  const map = useMap()
+
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: '140px',
+      left: '10px',
+      zIndex: 1000,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '2px',
+    }}>
+      <button
+        onClick={() => map.zoomIn()}
+        style={{
+          background: 'white',
+          border: '2px solid rgba(0,0,0,0.2)',
+          borderRadius: '8px 8px 0 0',
+          width: '34px',
+          height: '34px',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          color: '#333',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }}
+      >
+        +
+      </button>
+      <button
+        onClick={() => map.zoomOut()}
+        style={{
+          background: 'white',
+          border: '2px solid rgba(0,0,0,0.2)',
+          borderTop: 'none',
+          borderRadius: '0 0 8px 8px',
+          width: '34px',
+          height: '34px',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          color: '#333',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        }}
+      >
+        −
+      </button>
+    </div>
   )
 }
 
@@ -86,6 +140,7 @@ export default function Map({ trails }: { trails: any[] }) {
         center={[49.8175, 15.4730]}
         zoom={8}
         style={{ height: '100%', width: '100%' }}
+        zoomControl={false}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -118,6 +173,7 @@ export default function Map({ trails }: { trails: any[] }) {
             </Popup>
           </Marker>
         )}
+        <ZoomControl />
         <LocateButton onLocate={setUserLocation} />
       </MapContainer>
     </div>
