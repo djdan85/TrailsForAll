@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const icon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -26,7 +26,6 @@ const locationIcon = L.icon({
 
 function ZoomControl() {
   const map = useMap()
-
   return (
     <div style={{
       position: 'absolute',
@@ -49,11 +48,8 @@ function ZoomControl() {
           fontWeight: 'bold',
           cursor: 'pointer',
           color: '#333',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }}
-      >
-        +
-      </button>
+      >+</button>
       <button
         onClick={() => map.zoomOut()}
         style={{
@@ -67,20 +63,19 @@ function ZoomControl() {
           fontWeight: 'bold',
           cursor: 'pointer',
           color: '#333',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         }}
-      >
-        −
-      </button>
+      >−</button>
     </div>
   )
 }
 
 function FlyToLocation({ coords }: { coords: [number, number] | null }) {
   const map = useMap()
-  if (coords) {
-    map.flyTo(coords, 13, { animate: true, duration: 1.5 })
-  }
+  useEffect(() => {
+    if (coords) {
+      map.flyTo(coords, 13, { animate: true, duration: 1.5 })
+    }
+  }, [coords, map])
   return null
 }
 
@@ -88,7 +83,6 @@ export default function Map({ trails }: { trails: any[] }) {
   const router = useRouter()
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
   const [locating, setLocating] = useState(false)
-  const [flyTo, setFlyTo] = useState<[number, number] | null>(null)
 
   const difficultyLabel: any = {
     easy: 'Lehká',
@@ -98,19 +92,29 @@ export default function Map({ trails }: { trails: any[] }) {
   }
 
   const handleLocate = () => {
+    if (!navigator.geolocation) {
+      alert('Tvůj prohlížeč nepodporuje geolokaci.')
+      return
+    }
     setLocating(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const coords: [number, number] = [pos.coords.latitude, pos.coords.longitude]
         setUserLocation(coords)
-        setFlyTo(coords)
         setLocating(false)
       },
-      () => {
-        alert('Nepodařilo se získat polohu. Povol přístup k poloze v prohlížeči.')
+      (err) => {
+        console.error('Geolocation error:', err)
+        if (err.code === 1) {
+          alert('Přístup k poloze byl zamítnut. Povol polohu v nastavení prohlížeče.')
+        } else if (err.code === 2) {
+          alert('Polohu se nepodařilo zjistit. Zkus to znovu.')
+        } else {
+          alert('Vypršel čas pro zjištění polohy. Zkus to znovu.')
+        }
         setLocating(false)
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     )
   }
 
@@ -154,29 +158,30 @@ export default function Map({ trails }: { trails: any[] }) {
           </Marker>
         )}
         <ZoomControl />
-        <FlyToLocation coords={flyTo} />
+        <FlyToLocation coords={userLocation} />
       </MapContainer>
 
-      {/* Tlačítko polohy mimo mapu */}
       <button
+        onTouchEnd={(e) => { e.preventDefault(); handleLocate() }}
         onClick={handleLocate}
         disabled={locating}
         style={{
           position: 'absolute',
           bottom: '80px',
           left: '10px',
-          zIndex: 1000,
+          zIndex: 9999,
           background: locating ? '#555' : '#f97316',
           color: 'white',
           border: '2px solid rgba(0,0,0,0.2)',
           borderRadius: '8px',
-          padding: '8px 12px',
+          padding: '10px 14px',
           fontWeight: 'bold',
-          fontSize: '13px',
+          fontSize: '14px',
           cursor: locating ? 'not-allowed' : 'pointer',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
           whiteSpace: 'nowrap',
           touchAction: 'manipulation',
+          WebkitTapHighlightColor: 'transparent',
         }}
       >
         {locating ? '📡 Hledám...' : '📍 Moje poloha'}
