@@ -36,7 +36,6 @@ export default function Komunita() {
       const { data: allProfiles } = await supabase
         .from('profiles')
         .select('*')
-        .eq('show_in_community', true)
         .order('created_at', { ascending: false })
 
       const teamRoles = ['superadmin', 'admin', 'editor']
