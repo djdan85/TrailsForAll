@@ -40,7 +40,7 @@ export default function Navbar() {
     router.push('/')
   }
 
-  const isAdmin = profile?.role && ['admin', 'superadmin', 'moderator'].includes(profile.role)
+  const isAdmin = profile?.role && ['admin', 'superadmin', 'moderator', 'editor'].includes(profile.role)
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-[1000] bg-black shadow-md">

@@ -1,44 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
 
 interface ImageUploadProps {
   onUpload: (url: string) => void
   label?: string
-}
-
-const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> => {
-  return new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const img = document.createElement('img')
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        let width = img.width
-        let height = img.height
-
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width)
-          width = maxWidth
-        }
-
-        canvas.width = width
-        canvas.height = height
-
-        const ctx = canvas.getContext('2d')
-        ctx?.drawImage(img, 0, 0, width, height)
-
-        canvas.toBlob(
-          (blob) => resolve(blob as Blob),
-          'image/jpeg',
-          quality
-        )
-      }
-      img.src = e.target?.result as string
-    }
-    reader.readAsDataURL(file)
-  })
 }
 
 export default function ImageUpload({ onUpload, label = 'Nahrát obrázek' }: ImageUploadProps) {
@@ -61,36 +27,32 @@ export default function ImageUpload({ onUpload, label = 'Nahrát obrázek' }: Im
     }
 
     setUploading(true)
-
     const originalSize = (file.size / 1024).toFixed(0)
 
-    const compressed = await compressImage(file)
-    const compressedSize = (compressed.size / 1024).toFixed(0)
-    setFileInfo(`Původní: ${originalSize} KB → Komprimováno: ${compressedSize} KB`)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
 
-    const { data: userData } = await supabase.auth.getUser()
-    const userId = userData.user?.id || 'anonymous'
-    const fileName = `${userId}/${Date.now()}.jpg`
-
-    const { data, error } = await supabase.storage
-      .from('images')
-      .upload(fileName, compressed, {
-        contentType: 'image/jpeg',
-        upsert: true
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
       })
 
-    if (error) {
-      alert('Chyba při nahrávání: ' + error.message)
-      setUploading(false)
-      return
+      const data = await response.json()
+
+      if (!response.ok) {
+        alert('Chyba při nahrávání: ' + data.error)
+        setUploading(false)
+        return
+      }
+
+      setFileInfo(`Původní: ${originalSize} KB → Nahráno a optimalizováno`)
+      setPreview(data.url)
+      onUpload(data.url)
+    } catch (error) {
+      alert('Chyba při nahrávání.')
     }
 
-    const { data: urlData } = supabase.storage
-      .from('images')
-      .getPublicUrl(data.path)
-
-    setPreview(urlData.publicUrl)
-    onUpload(urlData.publicUrl)
     setUploading(false)
   }
 
@@ -134,10 +96,10 @@ export default function ImageUpload({ onUpload, label = 'Nahrát obrázek' }: Im
           disabled={uploading}
           className="hidden"
         />
-        {uploading ? 'Komprimuji a nahrávám...' : preview ? 'Změnit obrázek' : 'Klikni nebo přetáhni obrázek'}
+        {uploading ? 'Nahrávám na Cloudinary...' : preview ? 'Změnit obrázek' : 'Klikni nebo přetáhni obrázek'}
       </label>
 
-      <p className="text-gray-600 text-xs">Obrázek bude automaticky zkomprimován. Max. 20 MB.</p>
+      <p className="text-gray-600 text-xs">Obrázek bude automaticky optimalizován. Max. 20 MB.</p>
     </div>
   )
 }
