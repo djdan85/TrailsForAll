@@ -144,7 +144,7 @@ export default function AdminUsers() {
                 <div>
                   <div className="flex items-center gap-3 mb-1 flex-wrap">
                     <h2 className="text-white font-bold text-lg">
-                      {user.username || 'Bez username'}
+                      {user.username || user.email?.split('@')[0]}
                     </h2>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${roleColor[user.role] || roleColor.user}`}>
                       {roleLabel[user.role] || 'Uzivatel'}

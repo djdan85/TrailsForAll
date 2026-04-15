@@ -10,6 +10,7 @@ const Map = dynamic(() => import('./components/Map'), { ssr: false })
 export default function Home() {
   const [trails, setTrails] = useState<any[]>([])
   const [reviews, setReviews] = useState<any[]>([])
+  const [newMembers, setNewMembers] = useState<any[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -27,8 +28,19 @@ export default function Home() {
         .order('created_at', { ascending: false })
         .limit(3)
 
+      const today = new Date()
+      today.setDate(today.getDate() - 1)
+      const { data: membersData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('show_in_community', true)
+        .gte('created_at', today.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(5)
+
       setTrails(trailsData || [])
       setReviews(reviewsData || [])
+      setNewMembers(membersData || [])
     }
 
     fetchData()
@@ -47,9 +59,37 @@ export default function Home() {
     <main className="w-full flex flex-col">
 
       {/* Mapa */}
-      <div className="w-full mt-16" style={{ height: '500px', position: 'relative', zIndex: 0 }}>
-        <Map trails={trails} />
+      <div className="w-full mt-16 bg-gray-950" style={{ position: 'relative', zIndex: 0, padding: '20px 10%' }}>
+        <div style={{ height: '500px', width: '100%', borderRadius: '16px', overflow: 'hidden' }}>
+          <Map trails={trails} />
+        </div>
       </div>
+
+      {/* Noví členové */}
+      {newMembers.length > 0 && (
+        <div className="bg-gray-900 px-4 py-6" style={{ position: 'relative', zIndex: 1 }}>
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-xl font-bold text-white mb-1">Vítáme nové členy!</h2>
+            <p className="text-gray-400 text-sm mb-4">Nový BIKEŘI za posledních 24 hodin.</p>
+            <div className="flex gap-3 flex-wrap">
+              {newMembers.map((member) => (
+                <div
+                  key={member.id}
+                  onClick={() => router.push('/komunita')}
+                  className="bg-gray-800 rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-700 transition"
+                >
+                  <p className="text-white font-semibold text-sm">
+                    {member.username || member.email?.split('@')[0]}
+                  </p>
+                  {member.city && (
+                    <p className="text-gray-400 text-xs">{member.city}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Populární traily */}
       <div className="bg-gray-950 px-4 py-8" style={{ position: 'relative', zIndex: 1 }}>
@@ -64,7 +104,7 @@ export default function Home() {
                 onClick={() => router.push(`/trail/${trail.id}`)}
                 className="bg-gray-900 rounded-2xl overflow-hidden cursor-pointer hover:bg-gray-800 transition"
               >
-               <img
+                <img
                   src={trail.photo_url || '/logo.png'}
                   alt={trail.name}
                   className="w-full h-36 object-cover bg-gray-800"

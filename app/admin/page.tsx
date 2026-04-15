@@ -14,7 +14,8 @@ export default function Admin() {
   const [trails, setTrails] = useState<any[]>([])
   const [reviews, setReviews] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
-  const [tab, setTab] = useState<'trails' | 'reviews'>('trails')
+  const [newMembers, setNewMembers] = useState<any[]>([])
+  const [tab, setTab] = useState<'trails' | 'reviews' | 'members'>('trails')
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'deleted'>('pending')
   const [loading, setLoading] = useState(true)
   const [editingTrail, setEditingTrail] = useState<any>(null)
@@ -61,9 +62,18 @@ export default function Admin() {
       .select('*')
       .order('created_at', { ascending: false })
 
+    const today = new Date()
+    today.setDate(today.getDate() - 7)
+    const { data: membersData } = await supabase
+      .from('profiles')
+      .select('*')
+      .gte('created_at', today.toISOString())
+      .order('created_at', { ascending: false })
+
     setTrails(trailsData || [])
     setReviews(reviewsData || [])
     setUsers(usersData || [])
+    setNewMembers(membersData || [])
     setLoading(false)
   }
 
@@ -177,7 +187,7 @@ export default function Admin() {
             {isSuper ? 'Admin' : 'Moderátor'}
           </span>
         </div>
-        <p className="text-gray-400 mb-4">Správa trailů a recenzí.</p>
+        <p className="text-gray-400 mb-4">Správa trailů, recenzí a členů.</p>
 
         {isSuper && (
           <div className="mb-6">
@@ -190,7 +200,7 @@ export default function Admin() {
           </div>
         )}
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
           <button
             onClick={() => setTab('trails')}
             className={`px-6 py-2 rounded-xl font-semibold transition ${tab === 'trails' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
@@ -203,7 +213,34 @@ export default function Admin() {
           >
             Recenze ({reviews.filter(r => r.status === 'pending').length})
           </button>
+          <button
+            onClick={() => setTab('members')}
+            className={`px-6 py-2 rounded-xl font-semibold transition ${tab === 'members' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+          >
+            Noví členové ({newMembers.length})
+          </button>
         </div>
+
+        {tab === 'members' && (
+          <div className="flex flex-col gap-4">
+            <p className="text-gray-400 text-sm">Bikeři registrovaní v posledních 7 dnech.</p>
+            {newMembers.length === 0 && <p className="text-gray-400">Žádní noví členové.</p>}
+            {newMembers.map((member) => (
+              <div key={member.id} className="bg-gray-900 rounded-2xl p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-white font-bold text-lg">
+                      {member.username || member.email?.split('@')[0]}
+                    </h3>
+                    <p className="text-gray-400 text-sm">{member.email}</p>
+                    {member.city && <p className="text-gray-400 text-sm">{member.city}</p>}
+                  </div>
+                  <p className="text-gray-600 text-xs">{formatDate(member.created_at)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {tab === 'trails' && (
           <>
@@ -230,85 +267,25 @@ export default function Admin() {
                   {editingTrail?.id === trail.id ? (
                     <div className="flex flex-col gap-3">
                       <h2 className="text-orange-500 font-bold text-lg mb-1">Editace trailu</h2>
-                      <input
-                        className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500"
-                        value={editingTrail.name}
-                        onChange={e => setEditingTrail({...editingTrail, name: e.target.value})}
-                        placeholder="Název"
-                      />
-                      <textarea
-                        className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500"
-                        rows={3}
-                        value={editingTrail.description}
-                        onChange={e => setEditingTrail({...editingTrail, description: e.target.value})}
-                        placeholder="Popis"
-                      />
-                      <select
-                        className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500"
-                        value={editingTrail.difficulty}
-                        onChange={e => setEditingTrail({...editingTrail, difficulty: e.target.value})}
-                      >
+                      <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.name} onChange={e => setEditingTrail({...editingTrail, name: e.target.value})} placeholder="Název" />
+                      <textarea className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" rows={3} value={editingTrail.description} onChange={e => setEditingTrail({...editingTrail, description: e.target.value})} placeholder="Popis" />
+                      <select className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.difficulty} onChange={e => setEditingTrail({...editingTrail, difficulty: e.target.value})}>
                         <option value="easy">Lehká</option>
                         <option value="medium">Střední</option>
                         <option value="hard">Těžká</option>
                         <option value="expert">Expert</option>
                       </select>
-                      <input
-                        className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500"
-                        value={editingTrail.length_km}
-                        onChange={e => setEditingTrail({...editingTrail, length_km: e.target.value})}
-                        placeholder="Délka (km)"
-                        type="number"
-                      />
-                      <input
-                        className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500"
-                        value={editingTrail.location_name}
-                        onChange={e => setEditingTrail({...editingTrail, location_name: e.target.value})}
-                        placeholder="Lokalita"
-                      />
+                      <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.length_km} onChange={e => setEditingTrail({...editingTrail, length_km: e.target.value})} placeholder="Délka (km)" type="number" />
+                      <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.location_name} onChange={e => setEditingTrail({...editingTrail, location_name: e.target.value})} placeholder="Lokalita" />
                       <div>
-                        <label className="text-gray-400 text-sm mb-1 block">
-                          Souřadnice
-                          <span className="text-gray-600 ml-1">(např. 49.7890581, 13.4054814)</span>
-                        </label>
-                        <input
-                          className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500 w-full"
-                          value={editingTrail.coords || `${editingTrail.lat}, ${editingTrail.lng}`}
-                          onChange={e => handleCoords(e.target.value)}
-                          placeholder="49.7890581, 13.4054814"
-                        />
-                        {editingTrail.lat && editingTrail.lng && (
-                          <p className="text-gray-600 text-xs mt-1">Lat: {editingTrail.lat} / Lng: {editingTrail.lng}</p>
-                        )}
+                        <label className="text-gray-400 text-sm mb-1 block">Souřadnice</label>
+                        <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500 w-full" value={editingTrail.coords || `${editingTrail.lat}, ${editingTrail.lng}`} onChange={e => handleCoords(e.target.value)} placeholder="49.7890581, 13.4054814" />
                       </div>
-                      <ImageUpload
-                        label="Fotografie trailu"
-                        onUpload={url => setEditingTrail({...editingTrail, photo_url: url})}
-                      />
-                      {editingTrail.photo_url && (
-                        <div className="flex items-center gap-2">
-                          <p className="text-gray-400 text-xs">Aktuální foto: {editingTrail.photo_url.substring(0, 50)}...</p>
-                          <button
-                            onClick={() => setEditingTrail({...editingTrail, photo_url: ''})}
-                            className="text-red-400 text-xs hover:text-red-300"
-                          >
-                            Odstranit
-                          </button>
-                        </div>
-                      )}
-                      <input
-                        className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500"
-                        value={editingTrail.maps_url || ''}
-                        onChange={e => setEditingTrail({...editingTrail, maps_url: e.target.value})}
-                        placeholder="Odkaz na Mapy.com"
-                      />
+                      <ImageUpload label="Fotografie trailu" onUpload={url => setEditingTrail({...editingTrail, photo_url: url})} />
+                      <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.maps_url || ''} onChange={e => setEditingTrail({...editingTrail, maps_url: e.target.value})} placeholder="Odkaz na Mapy.com" />
                       <div className="flex gap-3 mt-2">
-                        <button onClick={saveTrailEdit} className="bg-orange-500 text-white px-6 py-2 rounded-xl text-sm hover:bg-orange-600 transition">
-                          Uložit
-                        </button>
-                        <button onClick={() => setEditingTrail(null)} className="bg-gray-700 text-white px-6 py-2 rounded-xl text-sm hover:bg-gray-600 transition">
-                          Zrušit
-                        </button>
+                        <button onClick={saveTrailEdit} className="bg-orange-500 text-white px-6 py-2 rounded-xl text-sm hover:bg-orange-600 transition">Uložit</button>
+                        <button onClick={() => setEditingTrail(null)} className="bg-gray-700 text-white px-6 py-2 rounded-xl text-sm hover:bg-gray-600 transition">Zrušit</button>
                       </div>
                     </div>
                   ) : (
@@ -335,53 +312,24 @@ export default function Admin() {
                         <span>{difficultyLabel[trail.difficulty]}</span>
                         <span>·</span>
                         <span>{trail.length_km} km</span>
-                        {trail.maps_url && <span>· Maps</span>}
                       </div>
                       <div className="flex flex-col gap-1 mb-4">
-                        <p className="text-gray-600 text-xs">
-                          Přidal: {trail.created_by_username || 'Neznámý'} — {formatDate(trail.created_at)}
-                        </p>
-                        {trail.approved_at && (
-                          <p className="text-gray-600 text-xs">
-                            Schválil: {trail.approved_by_username || 'Admin'} — {formatDate(trail.approved_at)}
-                          </p>
-                        )}
-                        {trail.updated_at && (
-                          <p className="text-gray-600 text-xs">
-                            Upravil: {trail.updated_by_username || 'Admin'} — {formatDate(trail.updated_at)}
-                          </p>
-                        )}
+                        <p className="text-gray-600 text-xs">Přidal: {trail.created_by_username || 'Neznámý'} — {formatDate(trail.created_at)}</p>
+                        {trail.approved_at && <p className="text-gray-600 text-xs">Schválil: {trail.approved_by_username || 'Admin'} — {formatDate(trail.approved_at)}</p>}
+                        {trail.updated_at && <p className="text-gray-600 text-xs">Upravil: {trail.updated_by_username || 'Admin'} — {formatDate(trail.updated_at)}</p>}
                       </div>
                       <div className="flex gap-3 flex-wrap">
                         {trail.status === 'deleted' ? (
                           <>
-                            <button onClick={() => updateTrailStatus(trail.id, 'pending')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">
-                              Obnovit
-                            </button>
-                            {isSuper && (
-                              <button onClick={() => deleteTrailPermanently(trail.id)} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">
-                                Trvale smazat
-                              </button>
-                            )}
+                            <button onClick={() => updateTrailStatus(trail.id, 'pending')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">Obnovit</button>
+                            {isSuper && <button onClick={() => deleteTrailPermanently(trail.id)} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">Trvale smazat</button>}
                           </>
                         ) : (
                           <>
-                            {trail.status !== 'approved' && (
-                              <button onClick={() => updateTrailStatus(trail.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">
-                                Schválit
-                              </button>
-                            )}
-                            {trail.status !== 'rejected' && (
-                              <button onClick={() => updateTrailStatus(trail.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">
-                                Zamítnout
-                              </button>
-                            )}
-                            <button onClick={() => setEditingTrail({...trail, coords: `${trail.lat}, ${trail.lng}`})} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition">
-                              Upravit
-                            </button>
-                            <button onClick={() => updateTrailStatus(trail.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">
-                              Do koše
-                            </button>
+                            {trail.status !== 'approved' && <button onClick={() => updateTrailStatus(trail.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">Schválit</button>}
+                            {trail.status !== 'rejected' && <button onClick={() => updateTrailStatus(trail.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">Zamítnout</button>}
+                            <button onClick={() => setEditingTrail({...trail, coords: `${trail.lat}, ${trail.lng}`})} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition">Upravit</button>
+                            <button onClick={() => updateTrailStatus(trail.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">Do koše</button>
                           </>
                         )}
                       </div>
@@ -416,30 +364,14 @@ export default function Admin() {
                 <div className="flex gap-3 flex-wrap">
                   {review.status === 'deleted' ? (
                     <>
-                      <button onClick={() => updateReviewStatus(review.id, 'pending')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">
-                        Obnovit
-                      </button>
-                      {isSuper && (
-                        <button onClick={() => deleteReviewPermanently(review.id)} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">
-                          Trvale smazat
-                        </button>
-                      )}
+                      <button onClick={() => updateReviewStatus(review.id, 'pending')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">Obnovit</button>
+                      {isSuper && <button onClick={() => deleteReviewPermanently(review.id)} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">Trvale smazat</button>}
                     </>
                   ) : (
                     <>
-                      {review.status !== 'approved' && (
-                        <button onClick={() => updateReviewStatus(review.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">
-                          Schválit
-                        </button>
-                      )}
-                      {review.status !== 'rejected' && (
-                        <button onClick={() => updateReviewStatus(review.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">
-                          Zamítnout
-                        </button>
-                      )}
-                      <button onClick={() => updateReviewStatus(review.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">
-                        Do koše
-                      </button>
+                      {review.status !== 'approved' && <button onClick={() => updateReviewStatus(review.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">Schválit</button>}
+                      {review.status !== 'rejected' && <button onClick={() => updateReviewStatus(review.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">Zamítnout</button>}
+                      <button onClick={() => updateReviewStatus(review.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">Do koše</button>
                     </>
                   )}
                 </div>
