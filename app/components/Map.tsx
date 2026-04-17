@@ -6,9 +6,18 @@ import L from 'leaflet'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
-const icon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+const officialIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+  iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+})
+
+const unofficialIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-black.png',
+  iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -130,25 +139,30 @@ export default function Map({ trails }: { trails: any[] }) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {trails.map((trail) => (
-          <Marker
-            key={trail.id}
-            position={[trail.lat, trail.lng]}
-            icon={icon}
-          >
-            <Popup>
-              <div>
-                <h3 style={{ fontWeight: 'bold', marginBottom: '4px' }}>{trail.name}</h3>
-                <p style={{ color: '#888', fontSize: '12px' }}>{trail.location_name}</p>
-                <p style={{ fontSize: '12px' }}>{difficultyLabel[trail.difficulty]} — {trail.length_km} km</p>
-                <button
-                  onClick={() => router.push(`/trail/${trail.id}`)}
-                  style={{ background: '#f97316', color: 'white', padding: '4px 8px', borderRadius: '6px', marginTop: '8px', cursor: 'pointer', border: 'none' }}
-                >
-                  Zobrazit detail
-                </button>
-              </div>
-            </Popup>
-          </Marker>
+          trail.lat && trail.lng ? (
+            <Marker
+              key={trail.id}
+              position={[trail.lat, trail.lng]}
+              icon={trail.is_official ? officialIcon : unofficialIcon}
+            >
+              <Popup>
+                <div>
+                  <h3 style={{ fontWeight: 'bold', marginBottom: '4px' }}>{trail.name}</h3>
+                  <p style={{ color: '#888', fontSize: '12px' }}>{trail.location_name}</p>
+                  <p style={{ fontSize: '12px' }}>{difficultyLabel[trail.difficulty]} — {trail.length_km} km</p>
+                  {!trail.is_official && (
+                    <p style={{ fontSize: '11px', color: '#aaa', marginTop: '2px' }}>☠️ Neoficiální trail</p>
+                  )}
+                  <button
+                    onClick={() => router.push(`/trail/${trail.id}`)}
+                    style={{ background: '#f97316', color: 'white', padding: '4px 8px', borderRadius: '6px', marginTop: '8px', cursor: 'pointer', border: 'none' }}
+                  >
+                    Zobrazit detail
+                  </button>
+                </div>
+              </Popup>
+            </Marker>
+          ) : null
         ))}
         {userLocation && (
           <Marker position={userLocation} icon={locationIcon}>

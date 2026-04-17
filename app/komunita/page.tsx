@@ -89,7 +89,7 @@ export default function Komunita() {
     admin: 'Admin',
     editor: 'Redaktor',
     moderator: 'Moderátor',
-    member: 'Člen',
+    member: 'BIKER',
     user: 'Uživatel'
   }
 

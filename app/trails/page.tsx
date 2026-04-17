@@ -19,7 +19,7 @@ export default function Trails() {
         .order('created_at', { ascending: false })
 
       if (error) console.error(error)
-      else setTrails(data)
+      else setTrails(data || [])
       setLoading(false)
     }
     fetchTrails()
@@ -79,11 +79,18 @@ export default function Trails() {
               onClick={() => router.push(`/trail/${trail.id}`)}
               className="bg-gray-900 rounded-2xl overflow-hidden cursor-pointer hover:bg-gray-800 transition"
             >
-               <img
+              <div className="relative">
+                <img
                   src={trail.photo_url || '/logo.png'}
                   alt={trail.name}
                   className="w-full h-36 object-cover bg-gray-800"
                 />
+                {!trail.is_official && (
+                  <span className="absolute top-2 left-2 bg-gray-900 text-orange-400 text-xs font-semibold px-2 py-1 rounded-lg border border-orange-400/30">
+                    ☠️ Neoficiální
+                  </span>
+                )}
+              </div>
               <div className="p-6">
                 <h2 className="text-white font-bold text-xl mb-1">{trail.name}</h2>
                 <p className="text-gray-400 text-sm mb-3">{trail.location_name}</p>

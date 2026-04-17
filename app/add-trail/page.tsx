@@ -24,6 +24,7 @@ export default function AddTrail() {
     location_name: '',
     photo_url: '',
     maps_url: '',
+    is_official: true,
   })
 
   useEffect(() => {
@@ -42,7 +43,6 @@ export default function AddTrail() {
   const handleGpxUpload = (url: string, points: [number, number][]) => {
     setGpxUrl(url)
     if (points.length > 0) {
-      // Nastav pin na start trasy z GPX
       setRoutePoints([points[0]])
     } else {
       setRoutePoints([])
@@ -71,6 +71,7 @@ export default function AddTrail() {
       gpx_url: gpxUrl || null,
       photo_url: form.photo_url || null,
       maps_url: form.maps_url || null,
+      is_official: form.is_official,
       created_by: user.id,
       status: 'pending'
     })
@@ -148,6 +149,40 @@ export default function AddTrail() {
               className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
               placeholder="Město, Region"
             />
+          </div>
+
+          {/* Oficiální / Neoficiální */}
+          <div>
+            <label className="text-gray-400 text-sm mb-2 block">Typ trailu</label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setForm(prev => ({ ...prev, is_official: true }))}
+                className={`flex-1 py-3 rounded-xl font-semibold text-sm transition ${
+                  form.is_official
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
+              >
+                ✅ Oficiální
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm(prev => ({ ...prev, is_official: false }))}
+                className={`flex-1 py-3 rounded-xl font-semibold text-sm transition ${
+                  !form.is_official
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                }`}
+              >
+                ☠️ Neoficiální
+              </button>
+            </div>
+            {!form.is_official && (
+              <p className="text-gray-600 text-xs mt-2">
+                Neoficiální traily vidí pouze členové komunity s přístupem od admina.
+              </p>
+            )}
           </div>
 
           <div>

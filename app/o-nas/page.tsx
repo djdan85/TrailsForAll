@@ -31,13 +31,20 @@ export default function ONas() {
         </div>
 
         <div className="bg-gray-900 rounded-2xl p-8 mb-6">
-          <h2 className="text-xl font-bold text-white mb-4">Zdarma? Jo, zdarma!</h2>
+          <h2 className="text-xl font-bold text-white mb-4">Zdarma — a tak to myslíme!</h2>
           <p className="text-gray-300 leading-relaxed mb-4">
-            Trails for All je a bude pro uživatele zdarma. Žádné předplatné, žádné skryté poplatky. Chceme, aby se komunita rozvíjela přirozeně — a pokud jednou přijde reklama, bude vždy nenápadná a nikdy nepřebije to podstatné. Prostě jako dobrý partner na trail — jede vedle tebe, netlačí se před tebe.
+            Trails for All je teď v testovacím provozu — zkoušíme, ladíme a stavíme. Pro uživatele je všechno zdarma a žádné předplatné neplánujeme. Pokud jednou přijde reklama, bude vždy nenápadná a nikdy nepřebije to podstatné. Prostě jako dobrý parťák na trail — jede vedle tebe, netlačí se před tebe.
           </p>
-          <p className="text-gray-300 leading-relaxed">
-            Věříme, že silná komunita je základ. A silná komunita se stará sama o sebe.
+          <h3 className="text-white font-semibold mb-3">Chceš nám pomoct?</h3>
+          <p className="text-gray-300 leading-relaxed mb-4">
+            Projekt provozujeme z vlastní kapsy — doména, hosting, vývoj. Pokud tě Trails for All baví, jakýkoliv příspěvek nás posune dál. Není to povinnost — je to jen gesto od bikera bikerům. 🤜🤛
           </p>
+          <button
+            onClick={() => window.location.href = 'mailto:info@pasek-art.cz'}
+            className="text-orange-500 hover:text-orange-400 transition text-sm font-semibold"
+          >
+            Ozvi se nám na info@pasek-art.cz →
+          </button>
         </div>
 
         <div className="bg-gray-900 rounded-2xl p-8 mb-6">

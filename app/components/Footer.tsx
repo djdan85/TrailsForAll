@@ -17,7 +17,7 @@ export default function Footer() {
           <div>
             <h3 className="text-orange-500 font-bold text-xl mb-3">Trails for All</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Komunitní mapa trailů pro všechny generace bikerů. Zdarma, pro všechny, navždy.
+              Komunitní mapa trailů pro všechny generace bikerů. Testovací provoz ZDARMA.
             </p>
           </div>
 
@@ -67,7 +67,7 @@ export default function Footer() {
 
         <div className="border-t border-gray-800 pt-6 flex flex-col md:flex-row items-center justify-between gap-2">
           <p className="text-gray-600 text-xs">
-            2025 Trails for All. Vytvořeno s láskou k trailům.
+            2025 Trails for All. Vytvořeno pro správné BIKERY.
           </p>
           <p className="text-gray-600 text-xs">
             Dalibor Pašek — info@pasek-art.cz

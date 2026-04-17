@@ -130,6 +130,7 @@ export default function Admin() {
         lng: parseFloat(editingTrail.lng),
         photo_url: editingTrail.photo_url || null,
         maps_url: editingTrail.maps_url || null,
+        is_official: editingTrail.is_official,
         updated_at: new Date().toISOString(),
         updated_by: user.id,
       })
@@ -201,22 +202,13 @@ export default function Admin() {
         )}
 
         <div className="flex gap-2 mb-6 flex-wrap">
-          <button
-            onClick={() => setTab('trails')}
-            className={`px-6 py-2 rounded-xl font-semibold transition ${tab === 'trails' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
-          >
+          <button onClick={() => setTab('trails')} className={`px-6 py-2 rounded-xl font-semibold transition ${tab === 'trails' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
             Traily ({trails.filter(t => t.status === 'pending').length})
           </button>
-          <button
-            onClick={() => setTab('reviews')}
-            className={`px-6 py-2 rounded-xl font-semibold transition ${tab === 'reviews' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
-          >
+          <button onClick={() => setTab('reviews')} className={`px-6 py-2 rounded-xl font-semibold transition ${tab === 'reviews' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
             Recenze ({reviews.filter(r => r.status === 'pending').length})
           </button>
-          <button
-            onClick={() => setTab('members')}
-            className={`px-6 py-2 rounded-xl font-semibold transition ${tab === 'members' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
-          >
+          <button onClick={() => setTab('members')} className={`px-6 py-2 rounded-xl font-semibold transition ${tab === 'members' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
             Noví členové ({newMembers.length})
           </button>
         </div>
@@ -229,9 +221,7 @@ export default function Admin() {
               <div key={member.id} className="bg-gray-900 rounded-2xl p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-white font-bold text-lg">
-                      {member.username || member.email?.split('@')[0]}
-                    </h3>
+                    <h3 className="text-white font-bold text-lg">{member.username || member.email?.split('@')[0]}</h3>
                     <p className="text-gray-400 text-sm">{member.email}</p>
                     {member.city && <p className="text-gray-400 text-sm">{member.city}</p>}
                   </div>
@@ -281,6 +271,27 @@ export default function Admin() {
                         <label className="text-gray-400 text-sm mb-1 block">Souřadnice</label>
                         <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500 w-full" value={editingTrail.coords || `${editingTrail.lat}, ${editingTrail.lng}`} onChange={e => handleCoords(e.target.value)} placeholder="49.7890581, 13.4054814" />
                       </div>
+
+                      <div>
+                        <label className="text-gray-400 text-sm mb-2 block">Typ trailu</label>
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setEditingTrail({...editingTrail, is_official: true})}
+                            className={`flex-1 py-2 rounded-xl font-semibold text-sm transition ${editingTrail.is_official ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                          >
+                            ✅ Oficiální
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingTrail({...editingTrail, is_official: false})}
+                            className={`flex-1 py-2 rounded-xl font-semibold text-sm transition ${!editingTrail.is_official ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                          >
+                            ☠️ Neoficiální
+                          </button>
+                        </div>
+                      </div>
+
                       <ImageUpload label="Fotografie trailu" onUpload={url => setEditingTrail({...editingTrail, photo_url: url})} />
                       <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.maps_url || ''} onChange={e => setEditingTrail({...editingTrail, maps_url: e.target.value})} placeholder="Odkaz na Mapy.com" />
                       <div className="flex gap-3 mt-2">
@@ -292,7 +303,18 @@ export default function Admin() {
                     <>
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <h2 className="text-white font-bold text-xl">{trail.name}</h2>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h2 className="text-white font-bold text-xl">{trail.name}</h2>
+                            {trail.is_official ? (
+                              <span className="text-xs px-2 py-0.5 rounded-lg border border-green-400/30 text-green-400 bg-gray-800">
+                                ✅ Oficiální
+                              </span>
+                            ) : (
+                              <span className="text-xs px-2 py-0.5 rounded-lg border border-orange-400/30 text-orange-400 bg-gray-800">
+                                ☠️ Neoficiální
+                              </span>
+                            )}
+                          </div>
                           <p className="text-gray-400 text-sm">{trail.location_name}</p>
                         </div>
                         <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
