@@ -208,7 +208,7 @@ export default function TrailDetail() {
                   </button>
                 ) : (
                   <div className="flex flex-col gap-3">
-                    <p className="text-gray-500 text-sm">GPX soubor není k dispozici. Máš ho? Nahraj ho!</p>
+                    <p className="text-white font-bold text-sm">GPX soubor není k dispozici. Máš ho? Nahraj ho!</p>
                     <GpxUpload onUpload={(url) => handleGpxUpload(url)} />
                     {gpxMessage && (
                       <p className="text-orange-400 text-xs">{gpxMessage}</p>
