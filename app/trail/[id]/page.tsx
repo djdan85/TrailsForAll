@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
+import GpxUpload from '../../components/GpxUpload'
+
+const TrailMap = dynamic(() => import('../../components/TrailMap'), { ssr: false })
 
 export default function TrailDetail() {
   const { id } = useParams()
@@ -10,10 +14,12 @@ export default function TrailDetail() {
   const [trail, setTrail] = useState<any>(null)
   const [reviews, setReviews] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [comment, setComment] = useState('')
   const [rating, setRating] = useState(5)
   const [message, setMessage] = useState('')
+  const [gpxMessage, setGpxMessage] = useState('')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,6 +37,15 @@ export default function TrailDetail() {
         .order('created_at', { ascending: false })
 
       const { data: userData } = await supabase.auth.getUser()
+
+      if (userData.user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role, can_see_unofficial')
+          .eq('id', userData.user.id)
+          .single()
+        setProfile(profileData)
+      }
 
       setTrail(trailData)
       setReviews(reviewsData || [])
@@ -59,6 +74,22 @@ export default function TrailDetail() {
     else setMessage('Recenze odeslána ke schválení!')
     setComment('')
   }
+
+  const handleGpxUpload = async (url: string) => {
+    const { error } = await supabase
+      .from('trails')
+      .update({ gpx_url: url })
+      .eq('id', id)
+
+    if (error) {
+      setGpxMessage('Chyba při ukládání GPX: ' + error.message)
+    } else {
+      setGpxMessage('GPX soubor byl úspěšně nahrán!')
+      setTrail((prev: any) => ({ ...prev, gpx_url: url }))
+    }
+  }
+
+  const canAccessGpx = profile?.role && ['member', 'moderator', 'editor', 'admin', 'superadmin'].includes(profile.role)
 
   const difficultyLabel: any = {
     easy: '🟢 Lehká',
@@ -102,8 +133,17 @@ export default function TrailDetail() {
             className="w-full h-56 object-cover bg-gray-800"
           />
           <div className="p-6">
-            <h1 className="text-3xl font-bold text-white mb-1">{trail.name}</h1>
-            <p className="text-gray-400 mb-6">{trail.location_name}</p>
+            <div className="flex items-center gap-3 mb-1 flex-wrap">
+              <h1 className="text-3xl font-bold text-white">{trail.name}</h1>
+              {!trail.is_official && (
+                <span className="text-xs px-2 py-0.5 rounded-lg border border-orange-400/30 text-orange-400 bg-gray-800">
+                  ☠️ Neoficiální
+                </span>
+              )}
+            </div>
+            <p className="text-gray-400 mb-6">
+              {trail.location_name}{trail.region ? ` · ${trail.region}` : ''}
+            </p>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-gray-800 rounded-xl p-4">
@@ -123,10 +163,60 @@ export default function TrailDetail() {
               <p className="text-white">{trail.description}</p>
             </div>
 
-            <div className="bg-gray-800 rounded-xl p-4 mb-4">
-              <p className="text-gray-400 text-sm mb-2">Poloha</p>
-              <p className="text-white">{trail.lat}, {trail.lng}</p>
-            </div>
+            {/* Mapa */}
+            {trail.lat && trail.lng && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-gray-400 text-sm">Poloha startu</p>
+                  <div className="flex gap-2 items-center">
+                    <button
+                      onClick={() => window.open(`https://www.google.com/maps?q=${trail.lat},${trail.lng}`, '_blank')}
+                      className="text-orange-500 hover:text-orange-400 text-xs transition"
+                    >
+                      Google Maps
+                    </button>
+                    <span className="text-gray-600 text-xs">|</span>
+                    <button
+                      onClick={() => window.open(`https://mapy.com/zakladni?x=${trail.lng}&y=${trail.lat}&z=15`, '_blank')}
+                      className="text-orange-500 hover:text-orange-400 text-xs transition"
+                    >
+                      Mapy.com
+                    </button>
+                  </div>
+                </div>
+                <div style={{ height: '300px', borderRadius: '12px', overflow: 'hidden' }}>
+                  <TrailMap
+                    lat={parseFloat(trail.lat)}
+                    lng={parseFloat(trail.lng)}
+                    name={trail.name}
+                    isOfficial={trail.is_official}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* GPX sekce */}
+            {canAccessGpx && (
+              <div className="bg-gray-800 rounded-xl p-4 mb-4">
+                <p className="text-gray-400 text-sm mb-3">GPX soubor</p>
+                {trail.gpx_url ? (
+                  <button
+                    onClick={() => window.open(trail.gpx_url, '_blank')}
+                    className="w-full flex items-center justify-center gap-2 bg-orange-500 text-white py-3 rounded-xl hover:bg-orange-600 transition font-semibold"
+                  >
+                    📥 Stáhnout GPX
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-gray-500 text-sm">GPX soubor není k dispozici. Máš ho? Nahraj ho!</p>
+                    <GpxUpload onUpload={(url) => handleGpxUpload(url)} />
+                    {gpxMessage && (
+                      <p className="text-orange-400 text-xs">{gpxMessage}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col gap-1 mb-4">
               <p className="text-gray-600 text-xs">

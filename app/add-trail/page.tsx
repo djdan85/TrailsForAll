@@ -16,6 +16,7 @@ export default function AddTrail() {
   const [message, setMessage] = useState('')
   const [routePoints, setRoutePoints] = useState<[number, number][]>([])
   const [gpxUrl, setGpxUrl] = useState('')
+  const [region, setRegion] = useState('')
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -72,6 +73,7 @@ export default function AddTrail() {
       photo_url: form.photo_url || null,
       maps_url: form.maps_url || null,
       is_official: form.is_official,
+      region: region || null,
       created_by: user.id,
       status: 'pending'
     })
@@ -151,7 +153,7 @@ export default function AddTrail() {
             />
           </div>
 
-          {/* Oficiální / Neoficiální */}
+          {/* Typ trailu */}
           <div>
             <label className="text-gray-400 text-sm mb-2 block">Typ trailu</label>
             <div className="flex gap-3">
@@ -185,15 +187,23 @@ export default function AddTrail() {
             )}
           </div>
 
+          {/* Mapa */}
           <div>
             <label className="text-gray-400 text-sm mb-1 block">
               Start trailu
               <span className="text-gray-600 ml-1">— klikni na mapu, nebo se doplní z GPX</span>
             </label>
-            <RouteMap points={routePoints} onChange={setRoutePoints} />
+            <RouteMap
+              points={routePoints}
+              onChange={(pts, reg) => {
+                setRoutePoints(pts)
+                if (reg) setRegion(reg)
+              }}
+            />
             {routePoints.length > 0 && (
               <p className="text-gray-600 text-xs mt-1">
                 📍 {routePoints[0][0].toFixed(5)}, {routePoints[0][1].toFixed(5)}
+                {region && <span className="ml-2">· {region}</span>}
               </p>
             )}
           </div>

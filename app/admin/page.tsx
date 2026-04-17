@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
 import ImageUpload from '../components/ImageUpload'
+import dynamic from 'next/dynamic'
+
+const RouteMap = dynamic(() => import('../components/RouteMap'), { ssr: false })
 
 const ADMIN_EMAIL = 'dalibor.pasek@gmail.com'
 
@@ -19,6 +22,7 @@ export default function Admin() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'deleted'>('pending')
   const [loading, setLoading] = useState(true)
   const [editingTrail, setEditingTrail] = useState<any>(null)
+  const [editRoutePoints, setEditRoutePoints] = useState<[number, number][]>([])
 
   useEffect(() => {
     const getUser = async () => {
@@ -104,20 +108,10 @@ export default function Admin() {
     fetchAll()
   }
 
-  const handleCoords = (val: string) => {
-    const parts = val.replace(/[NSns]/g, '').replace(/[EWew]/g, '').split(',')
-    if (parts.length === 2) {
-      const lat = parseFloat(parts[0].trim())
-      const lng = parseFloat(parts[1].trim())
-      if (!isNaN(lat) && !isNaN(lng)) {
-        setEditingTrail((prev: any) => ({ ...prev, coords: val, lat: lat.toString(), lng: lng.toString() }))
-        return
-      }
-    }
-    setEditingTrail((prev: any) => ({ ...prev, coords: val }))
-  }
-
   const saveTrailEdit = async () => {
+    const lat = editRoutePoints.length > 0 ? editRoutePoints[0][0] : parseFloat(editingTrail.lat)
+    const lng = editRoutePoints.length > 0 ? editRoutePoints[0][1] : parseFloat(editingTrail.lng)
+
     const { error } = await supabase
       .from('trails')
       .update({
@@ -126,8 +120,8 @@ export default function Admin() {
         difficulty: editingTrail.difficulty,
         length_km: parseFloat(editingTrail.length_km),
         location_name: editingTrail.location_name,
-        lat: parseFloat(editingTrail.lat),
-        lng: parseFloat(editingTrail.lng),
+        lat,
+        lng,
         photo_url: editingTrail.photo_url || null,
         maps_url: editingTrail.maps_url || null,
         is_official: editingTrail.is_official,
@@ -138,6 +132,7 @@ export default function Admin() {
 
     if (!error) {
       setEditingTrail(null)
+      setEditRoutePoints([])
       fetchAll()
     }
   }
@@ -267,9 +262,22 @@ export default function Admin() {
                       </select>
                       <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.length_km} onChange={e => setEditingTrail({...editingTrail, length_km: e.target.value})} placeholder="Délka (km)" type="number" />
                       <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.location_name} onChange={e => setEditingTrail({...editingTrail, location_name: e.target.value})} placeholder="Lokalita" />
+
+                      {/* Mapa pro přesunutí pinu */}
                       <div>
-                        <label className="text-gray-400 text-sm mb-1 block">Souřadnice</label>
-                        <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500 w-full" value={editingTrail.coords || `${editingTrail.lat}, ${editingTrail.lng}`} onChange={e => handleCoords(e.target.value)} placeholder="49.7890581, 13.4054814" />
+                        <label className="text-gray-400 text-sm mb-1 block">
+                          Start trailu
+                          <span className="text-gray-600 ml-1">— klikni na mapu pro přesunutí pinu</span>
+                        </label>
+                        <RouteMap
+                          points={editRoutePoints.length > 0 ? editRoutePoints : (editingTrail.lat && editingTrail.lng ? [[parseFloat(editingTrail.lat), parseFloat(editingTrail.lng)]] : [])}
+                          onChange={setEditRoutePoints}
+                        />
+                        {editRoutePoints.length > 0 && (
+                          <p className="text-gray-600 text-xs mt-1">
+                            📍 {editRoutePoints[0][0].toFixed(5)}, {editRoutePoints[0][1].toFixed(5)}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -296,7 +304,7 @@ export default function Admin() {
                       <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.maps_url || ''} onChange={e => setEditingTrail({...editingTrail, maps_url: e.target.value})} placeholder="Odkaz na Mapy.com" />
                       <div className="flex gap-3 mt-2">
                         <button onClick={saveTrailEdit} className="bg-orange-500 text-white px-6 py-2 rounded-xl text-sm hover:bg-orange-600 transition">Uložit</button>
-                        <button onClick={() => setEditingTrail(null)} className="bg-gray-700 text-white px-6 py-2 rounded-xl text-sm hover:bg-gray-600 transition">Zrušit</button>
+                        <button onClick={() => { setEditingTrail(null); setEditRoutePoints([]) }} className="bg-gray-700 text-white px-6 py-2 rounded-xl text-sm hover:bg-gray-600 transition">Zrušit</button>
                       </div>
                     </div>
                   ) : (
@@ -350,7 +358,7 @@ export default function Admin() {
                           <>
                             {trail.status !== 'approved' && <button onClick={() => updateTrailStatus(trail.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">Schválit</button>}
                             {trail.status !== 'rejected' && <button onClick={() => updateTrailStatus(trail.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">Zamítnout</button>}
-                            <button onClick={() => setEditingTrail({...trail, coords: `${trail.lat}, ${trail.lng}`})} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition">Upravit</button>
+                            <button onClick={() => { setEditingTrail({...trail}); setEditRoutePoints(trail.lat && trail.lng ? [[parseFloat(trail.lat), parseFloat(trail.lng)]] : []) }} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition">Upravit</button>
                             <button onClick={() => updateTrailStatus(trail.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">Do koše</button>
                           </>
                         )}

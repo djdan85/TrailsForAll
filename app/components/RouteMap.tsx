@@ -6,13 +6,27 @@ import 'leaflet/dist/leaflet.css'
 
 interface Props {
   points: [number, number][]
-  onChange: (points: [number, number][]) => void
+  onChange: (points: [number, number][], region?: string) => void
 }
 
 export default function RouteMap({ points, onChange }: Props) {
   const mapRef = useRef<L.Map | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const markerRef = useRef<L.Marker | null>(null)
+
+  const fetchRegion = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=cs`,
+        { headers: { 'User-Agent': 'TrailsForAll/1.0' } }
+      )
+      const data = await res.json()
+      const state = data.address?.state || ''
+      return state
+    } catch {
+      return ''
+    }
+  }
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -24,9 +38,10 @@ export default function RouteMap({ points, onChange }: Props) {
       attribution: '© OpenStreetMap'
     }).addTo(map)
 
-    map.on('click', (e: L.LeafletMouseEvent) => {
+    map.on('click', async (e: L.LeafletMouseEvent) => {
       const newPoint: [number, number] = [e.latlng.lat, e.latlng.lng]
-      onChange([newPoint])
+      const region = await fetchRegion(e.latlng.lat, e.latlng.lng)
+      onChange([newPoint], region)
     })
 
     return () => {
@@ -67,9 +82,10 @@ export default function RouteMap({ points, onChange }: Props) {
     const map = mapRef.current
     if (!map) return
     map.off('click')
-    map.on('click', (e: L.LeafletMouseEvent) => {
+    map.on('click', async (e: L.LeafletMouseEvent) => {
       const newPoint: [number, number] = [e.latlng.lat, e.latlng.lng]
-      onChange([newPoint])
+      const region = await fetchRegion(e.latlng.lat, e.latlng.lng)
+      onChange([newPoint], region)
     })
   }, [points, onChange])
 

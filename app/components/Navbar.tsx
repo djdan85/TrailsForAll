@@ -29,7 +29,16 @@ export default function Navbar() {
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      if (!session?.user) setProfile(null)
+      if (!session?.user) {
+        setProfile(null)
+      } else {
+        supabase
+          .from('profiles')
+          .select('username, role')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profileData }) => setProfile(profileData))
+      }
     })
 
     return () => listener.subscription.unsubscribe()
@@ -40,7 +49,8 @@ export default function Navbar() {
     router.push('/')
   }
 
-  const isAdmin = profile?.role && ['admin', 'superadmin', 'moderator', 'editor'].includes(profile.role)
+  const isAdmin = user?.email === 'dalibor.pasek@gmail.com' ||
+    (profile?.role && ['admin', 'superadmin', 'moderator', 'editor'].includes(profile.role))
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-[1000] bg-black shadow-md">
