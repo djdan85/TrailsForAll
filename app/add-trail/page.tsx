@@ -4,21 +4,24 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
 import ImageUpload from '../components/ImageUpload'
+import GpxUpload from '../components/GpxUpload'
+import dynamic from 'next/dynamic'
+
+const RouteMap = dynamic(() => import('../components/RouteMap'), { ssr: false })
 
 export default function AddTrail() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [routePoints, setRoutePoints] = useState<[number, number][]>([])
+  const [gpxUrl, setGpxUrl] = useState('')
   const [form, setForm] = useState({
     name: '',
     description: '',
     difficulty: 'easy',
     length_km: '',
     location_name: '',
-    lat: '',
-    lng: '',
-    coords: '',
     photo_url: '',
     maps_url: '',
   })
@@ -36,23 +39,26 @@ export default function AddTrail() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const handleCoords = (e: any) => {
-    const val = e.target.value
-    const parts = val.replace(/[NSns]/g, '').replace(/[EWew]/g, '').split(',')
-    if (parts.length === 2) {
-      const lat = parseFloat(parts[0].trim())
-      const lng = parseFloat(parts[1].trim())
-      if (!isNaN(lat) && !isNaN(lng)) {
-        setForm(prev => ({ ...prev, coords: val, lat: lat.toString(), lng: lng.toString() }))
-        return
-      }
+  const handleGpxUpload = (url: string, points: [number, number][]) => {
+    setGpxUrl(url)
+    if (points.length > 0) {
+      // Nastav pin na start trasy z GPX
+      setRoutePoints([points[0]])
+    } else {
+      setRoutePoints([])
     }
-    setForm(prev => ({ ...prev, coords: val }))
   }
 
   const handleSubmit = async () => {
+    if (routePoints.length === 0) {
+      setMessage('Označ start trailu na mapě nebo nahraj GPX soubor.')
+      return
+    }
+
     setLoading(true)
     setMessage('')
+
+    const startPoint = routePoints[0]
 
     const { error } = await supabase.from('trails').insert({
       name: form.name,
@@ -60,8 +66,9 @@ export default function AddTrail() {
       difficulty: form.difficulty,
       length_km: parseFloat(form.length_km),
       location_name: form.location_name,
-      lat: parseFloat(form.lat),
-      lng: parseFloat(form.lng),
+      lat: startPoint[0],
+      lng: startPoint[1],
+      gpx_url: gpxUrl || null,
       photo_url: form.photo_url || null,
       maps_url: form.maps_url || null,
       created_by: user.id,
@@ -145,20 +152,18 @@ export default function AddTrail() {
 
           <div>
             <label className="text-gray-400 text-sm mb-1 block">
-              Souřadnice
-              <span className="text-gray-600 ml-1">(zkopíruj z Google Maps, např. 49.7890581, 13.4054814)</span>
+              Start trailu
+              <span className="text-gray-600 ml-1">— klikni na mapu, nebo se doplní z GPX</span>
             </label>
-            <input
-              name="coords"
-              value={form.coords}
-              onChange={handleCoords}
-              className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-              placeholder="49.7890581, 13.4054814"
-            />
-            {form.lat && form.lng && (
-              <p className="text-gray-600 text-xs mt-1">Lat: {form.lat} / Lng: {form.lng}</p>
+            <RouteMap points={routePoints} onChange={setRoutePoints} />
+            {routePoints.length > 0 && (
+              <p className="text-gray-600 text-xs mt-1">
+                📍 {routePoints[0][0].toFixed(5)}, {routePoints[0][1].toFixed(5)}
+              </p>
             )}
           </div>
+
+          <GpxUpload onUpload={handleGpxUpload} />
 
           <ImageUpload
             label="Fotografie trailu (nepovinné)"
