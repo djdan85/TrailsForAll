@@ -190,6 +190,7 @@ export default function TrailDetail() {
                     lng={parseFloat(trail.lng)}
                     name={trail.name}
                     isOfficial={trail.is_official}
+                    gpxUrl={trail.gpx_url || undefined}
                   />
                 </div>
               </div>
