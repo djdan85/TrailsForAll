@@ -21,13 +21,18 @@ export async function POST(request: NextRequest) {
     const base64 = buffer.toString('base64')
     const dataUri = `data:${file.type};base64,${base64}`
 
+    const isGpx = file.name.endsWith('.gpx') || file.type === 'application/gpx+xml'
+
     const result = await cloudinary.uploader.upload(dataUri, {
       folder: 'trails-for-all',
-      transformation: [
-        { width: 1200, crop: 'limit' },
-        { quality: 'auto:good' },
-        { fetch_format: 'auto' },
-      ],
+      resource_type: isGpx ? 'raw' : 'image',
+      ...(isGpx ? {} : {
+        transformation: [
+          { width: 1200, crop: 'limit' },
+          { quality: 'auto:good' },
+          { fetch_format: 'auto' },
+        ],
+      }),
     })
 
     return NextResponse.json({ url: result.secure_url })
