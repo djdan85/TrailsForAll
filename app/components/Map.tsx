@@ -1,6 +1,6 @@
 'use client'
 
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { useRouter } from 'next/navigation'
@@ -88,10 +88,24 @@ function FlyToLocation({ coords }: { coords: [number, number] | null }) {
   return null
 }
 
+const parseGpx = (text: string): [number, number][] => {
+  const parser = new DOMParser()
+  const xml = parser.parseFromString(text, 'application/xml')
+  const trkpts = xml.querySelectorAll('trkpt')
+  const points: [number, number][] = []
+  trkpts.forEach(pt => {
+    const lat = parseFloat(pt.getAttribute('lat') || '')
+    const lon = parseFloat(pt.getAttribute('lon') || '')
+    if (!isNaN(lat) && !isNaN(lon)) points.push([lat, lon])
+  })
+  return points
+}
+
 export default function Map({ trails }: { trails: any[] }) {
   const router = useRouter()
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
   const [locating, setLocating] = useState(false)
+  const [gpxRoutes, setGpxRoutes] = useState<{ [trailId: string]: [number, number][] }>({})
 
   const difficultyLabel: any = {
     easy: 'Lehká',
@@ -99,6 +113,23 @@ export default function Map({ trails }: { trails: any[] }) {
     hard: 'Těžká',
     expert: 'Expert'
   }
+
+  // Načti GPX trasy pro všechny traily které mají gpx_url
+  useEffect(() => {
+    trails.forEach(trail => {
+      if (trail.gpx_url && !gpxRoutes[trail.id]) {
+        fetch(trail.gpx_url)
+          .then(res => res.text())
+          .then(text => {
+            const points = parseGpx(text)
+            if (points.length > 0) {
+              setGpxRoutes(prev => ({ ...prev, [trail.id]: points }))
+            }
+          })
+          .catch(() => {})
+      }
+    })
+  }, [trails])
 
   const handleLocate = () => {
     if (!navigator.geolocation) {
@@ -138,6 +169,23 @@ export default function Map({ trails }: { trails: any[] }) {
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        {/* GPX trasy */}
+        {trails.map(trail =>
+          gpxRoutes[trail.id] ? (
+            <Polyline
+              key={`gpx-${trail.id}`}
+              positions={gpxRoutes[trail.id]}
+              pathOptions={{
+                color: trail.is_official ? '#f97316' : '#6b7280',
+                weight: 3,
+                opacity: 0.8
+              }}
+            />
+          ) : null
+        )}
+
+        {/* Markery trailů */}
         {trails.map((trail) => (
           trail.lat && trail.lng ? (
             <Marker
@@ -153,6 +201,9 @@ export default function Map({ trails }: { trails: any[] }) {
                   {!trail.is_official && (
                     <p style={{ fontSize: '11px', color: '#aaa', marginTop: '2px' }}>☠️ Neoficiální trail</p>
                   )}
+                  {gpxRoutes[trail.id] && (
+                    <p style={{ fontSize: '11px', color: '#22c55e', marginTop: '2px' }}>📍 GPX trasa načtena</p>
+                  )}
                   <button
                     onClick={() => router.push(`/trail/${trail.id}`)}
                     style={{ background: '#f97316', color: 'white', padding: '4px 8px', borderRadius: '6px', marginTop: '8px', cursor: 'pointer', border: 'none' }}
@@ -164,6 +215,7 @@ export default function Map({ trails }: { trails: any[] }) {
             </Marker>
           ) : null
         ))}
+
         {userLocation && (
           <Marker position={userLocation} icon={locationIcon}>
             <Popup>
