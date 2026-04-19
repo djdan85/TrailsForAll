@@ -235,14 +235,25 @@ export default function TrailDetail() {
               )}
             </div>
 
-            {trail.maps_url && (
-              <button
-                onClick={() => window.open(trail.maps_url, '_blank')}
-                className="flex items-center justify-center gap-2 w-full bg-gray-800 text-white py-3 rounded-xl hover:bg-gray-700 transition"
-              >
-                🗺️ Zobrazit na Mapy.com
-              </button>
-            )}
+            {/* Tlačítka odkazů */}
+            <div className="flex gap-3 flex-wrap">
+              {trail.maps_url && (
+                <button
+                  onClick={() => window.open(trail.maps_url, '_blank')}
+                  className="flex items-center justify-center gap-2 flex-1 bg-gray-800 text-white py-3 rounded-xl hover:bg-gray-700 transition"
+                >
+                  🗺️ Mapy.com
+                </button>
+              )}
+              {trail.website_url && (
+                <button
+                  onClick={() => window.open(trail.website_url, '_blank')}
+                  className="flex items-center justify-center gap-2 flex-1 bg-gray-800 text-white py-3 rounded-xl hover:bg-gray-700 transition"
+                >
+                  🌐 Web trailu
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

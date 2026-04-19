@@ -25,6 +25,7 @@ export default function AddTrail() {
     location_name: '',
     photo_url: '',
     maps_url: '',
+    website_url: '',
     is_official: true,
   })
 
@@ -72,6 +73,7 @@ export default function AddTrail() {
       gpx_url: gpxUrl || null,
       photo_url: form.photo_url || null,
       maps_url: form.maps_url || null,
+      website_url: form.website_url || null,
       is_official: form.is_official,
       region: region || null,
       created_by: user.id,
@@ -226,6 +228,20 @@ export default function AddTrail() {
               onChange={handleChange}
               className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
               placeholder="https://mapy.com/..."
+            />
+          </div>
+
+          <div>
+            <label className="text-gray-400 text-sm mb-1 block">
+              Web trailu / bikeparku
+              <span className="text-gray-600 ml-1">(nepovinné)</span>
+            </label>
+            <input
+              name="website_url"
+              value={form.website_url}
+              onChange={handleChange}
+              className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="https://..."
             />
           </div>
 
