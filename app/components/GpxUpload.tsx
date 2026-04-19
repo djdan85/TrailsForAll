@@ -40,7 +40,6 @@ export default function GpxUpload({ onUpload }: Props) {
     setUploading(true)
 
     try {
-      // Parsuj GPX lokálně
       const text = await file.text()
       const points = parseGpx(text)
 
@@ -50,7 +49,6 @@ export default function GpxUpload({ onUpload }: Props) {
         return
       }
 
-      // Nahraj na Cloudinary
       const formData = new FormData()
       formData.append('file', file)
 
@@ -114,6 +112,16 @@ export default function GpxUpload({ onUpload }: Props) {
       </label>
 
       <p className="text-gray-600 text-xs">Max. 5 MB. Trasa se zobrazí na mapě.</p>
+      <p className="text-gray-600 text-xs">
+        Nemáš GPX? Vytvoř ho zdarma na{' '}
+        <button
+          type="button"
+          onClick={() => window.open('https://gpx.studio', '_blank')}
+          className="text-orange-500 hover:text-orange-400 transition"
+        >
+          gpx.studio
+        </button>
+      </p>
     </div>
   )
 }
