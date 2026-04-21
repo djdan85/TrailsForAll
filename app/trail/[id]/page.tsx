@@ -8,6 +8,25 @@ import GpxUpload from '../../components/GpxUpload'
 
 const TrailMap = dynamic(() => import('../../components/TrailMap'), { ssr: false })
 
+const trailTypeLabel: { [key: string]: string } = {
+  singltrek: '🚵 Singltrek / Trail',
+  pumptrack: '🔁 Pumptrack',
+  skatepark: '🛹 Skatepark',
+  bikepark: '🏔️ Bikepark',
+  crosscountry: '🛤️ Cross-country',
+}
+
+const skillLevelLabel: { [key: string]: string } = {
+  zacatecnik: '🟢 Začátečník',
+  pokrocily: '🔵 Pokročilý biker',
+  zkuseny: '🟠 Zkušený biker',
+  zabijak: '⚫ Zabijácký BIKER',
+  easy: '🟢 Lehká',
+  medium: '🟡 Střední',
+  hard: '🔴 Těžká',
+  expert: '⚫ Expert',
+}
+
 export default function TrailDetail() {
   const { id } = useParams()
   const router = useRouter()
@@ -91,13 +110,6 @@ export default function TrailDetail() {
 
   const canAccessGpx = profile?.role && ['member', 'moderator', 'editor', 'admin', 'superadmin'].includes(profile.role)
 
-  const difficultyLabel: any = {
-    easy: '🟢 Lehká',
-    medium: '🟡 Střední',
-    hard: '🔴 Těžká',
-    expert: '⚫ Expert'
-  }
-
   const formatDate = (date: string) => {
     if (!date) return null
     return new Date(date).toLocaleDateString('cs-CZ')
@@ -145,17 +157,30 @@ export default function TrailDetail() {
               {trail.location_name}{trail.region ? ` · ${trail.region}` : ''}
             </p>
 
+            {/* Info grid */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-gray-800 rounded-xl p-4">
-                <p className="text-gray-400 text-sm">Náročnost</p>
-                <p className="text-white font-semibold mt-1">
-                  {difficultyLabel[trail.difficulty]}
+                <p className="text-gray-400 text-sm">Typ místa</p>
+                <p className="text-white font-semibold mt-1 text-sm">
+                  {trailTypeLabel[trail.trail_type] || '🚵 Singltrek'}
+                </p>
+              </div>
+              <div className="bg-gray-800 rounded-xl p-4">
+                <p className="text-gray-400 text-sm">Pro koho</p>
+                <p className="text-white font-semibold mt-1 text-sm">
+                  {skillLevelLabel[trail.skill_level || trail.difficulty] || '🟢 Začátečník'}
                 </p>
               </div>
               <div className="bg-gray-800 rounded-xl p-4">
                 <p className="text-gray-400 text-sm">Délka</p>
                 <p className="text-white font-semibold mt-1">{trail.length_km} km</p>
               </div>
+              {trail.region && (
+                <div className="bg-gray-800 rounded-xl p-4">
+                  <p className="text-gray-400 text-sm">Kraj</p>
+                  <p className="text-white font-semibold mt-1 text-sm">{trail.region}</p>
+                </div>
+              )}
             </div>
 
             <div className="bg-gray-800 rounded-xl p-4 mb-4">
@@ -250,7 +275,7 @@ export default function TrailDetail() {
                   onClick={() => window.open(trail.website_url, '_blank')}
                   className="flex items-center justify-center gap-2 flex-1 bg-gray-800 text-white py-3 rounded-xl hover:bg-gray-700 transition"
                 >
-                  🌐 Web trailu
+                  🌐 Web místa
                 </button>
               )}
             </div>
