@@ -9,6 +9,57 @@ import dynamic from 'next/dynamic'
 
 const RouteMap = dynamic(() => import('../components/RouteMap'), { ssr: false })
 
+const trailTypes = [
+  {
+    value: 'singltrek',
+    label: '🚵 Singltrek / Trail',
+    desc: 'Úzká stezka v terénu, většinou v lese. Technické sekce, kořeny, kameny. Klasika pro MTB.'
+  },
+  {
+    value: 'pumptrack',
+    label: '🔁 Pumptrack',
+    desc: 'Okruh s vlnami a zatáčkami. Jedeš bez šlapání — jen pumpuješ tělem. Baví všechny věkové kategorie.'
+  },
+  {
+    value: 'skatepark',
+    label: '🛹 Skatepark',
+    desc: 'Betonový nebo dřevěný park s rampami, bowlem nebo překážkami. Ideální pro BMX, dirt a triky.'
+  },
+  {
+    value: 'bikepark',
+    label: '🏔️ Bikepark',
+    desc: 'Organizovaný areál s vyznačenými sjezdovkami a flow traily. Většinou lanovka nahoru, dolů na kole.'
+  },
+  {
+    value: 'crosscountry',
+    label: '🛤️ Cross-country trasa',
+    desc: 'Delší okruh nebo trasa krajinou — les, louky, kopce. Mix cest a singltreku. Důraz na vzdálenost a kondici.'
+  },
+]
+
+const skillLevels = [
+  {
+    value: 'zacatecnik',
+    label: '🟢 Začátečník',
+    desc: 'První kilometry na kole, žádné riziko. Rovný terén, žádné technické překážky.'
+  },
+  {
+    value: 'pokrocily',
+    label: '🔵 Pokročilý biker',
+    desc: 'Trochu praxe za sebou, základní technika jízdy. Zvládne mírné kopce a jednoduché terénní nerovnosti.'
+  },
+  {
+    value: 'zkuseny',
+    label: '🟠 Zkušený biker',
+    desc: 'Technické sekce, slušná kondice, kořeny a kameny nejsou problém. Jezdí pravidelně a ví co dělá.'
+  },
+  {
+    value: 'zabijak',
+    label: '⚫ Zabijácký BIKER',
+    desc: 'Jen pro ostřílené matadory. Pořádná dřina, technické výzvy, adrenalin na maximum. Slabší povahy ať raději jedou domů.'
+  },
+]
+
 export default function AddTrail() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -20,7 +71,8 @@ export default function AddTrail() {
   const [form, setForm] = useState({
     name: '',
     description: '',
-    difficulty: 'easy',
+    trail_type: 'singltrek',
+    skill_level: 'zacatecnik',
     length_km: '',
     location_name: '',
     photo_url: '',
@@ -65,7 +117,8 @@ export default function AddTrail() {
     const { error } = await supabase.from('trails').insert({
       name: form.name,
       description: form.description,
-      difficulty: form.difficulty,
+      trail_type: form.trail_type,
+      skill_level: form.skill_level,
       length_km: parseFloat(form.length_km),
       location_name: form.location_name,
       lat: startPoint[0],
@@ -86,22 +139,25 @@ export default function AddTrail() {
     setLoading(false)
   }
 
+  const selectedType = trailTypes.find(t => t.value === form.trail_type)
+  const selectedSkill = skillLevels.find(s => s.value === form.skill_level)
+
   return (
     <div className="min-h-screen bg-gray-950 pt-24 px-4 pb-10">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-white mb-2">Přidat trail</h1>
-        <p className="text-gray-400 mb-8">Trail bude po odeslání čekat na schválení adminem.</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Přidat místo</h1>
+        <p className="text-gray-400 mb-8">Místo bude po odeslání čekat na schválení adminem.</p>
 
         <div className="bg-gray-900 rounded-2xl p-6 flex flex-col gap-4">
 
           <div>
-            <label className="text-gray-400 text-sm mb-1 block">Název trailu</label>
+            <label className="text-gray-400 text-sm mb-1 block">Název</label>
             <input
               name="name"
               value={form.name}
               onChange={handleChange}
               className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-              placeholder="Název trailu"
+              placeholder="Název trailu / pumptracku / skateparku..."
             />
           </div>
 
@@ -113,23 +169,56 @@ export default function AddTrail() {
               onChange={handleChange}
               rows={4}
               className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-              placeholder="Popiš trail..."
+              placeholder="Popiš místo..."
             />
           </div>
 
+          {/* Typ místa */}
           <div>
-            <label className="text-gray-400 text-sm mb-1 block">Náročnost</label>
-            <select
-              name="difficulty"
-              value={form.difficulty}
-              onChange={handleChange}
-              className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-orange-500"
-            >
-              <option value="easy">🟢 Lehká</option>
-              <option value="medium">🟡 Střední</option>
-              <option value="hard">🔴 Těžká</option>
-              <option value="expert">⚫ Expert</option>
-            </select>
+            <label className="text-gray-400 text-sm mb-2 block">Typ místa</label>
+            <div className="flex flex-col gap-2">
+              {trailTypes.map(type => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, trail_type: type.value }))}
+                  className={`w-full text-left px-4 py-3 rounded-xl transition ${
+                    form.trail_type === type.value
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  <p className="font-semibold text-sm">{type.label}</p>
+                  <p className={`text-xs mt-0.5 ${form.trail_type === type.value ? 'text-orange-100' : 'text-gray-600'}`}>
+                    {type.desc}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Úroveň dovednosti */}
+          <div>
+            <label className="text-gray-400 text-sm mb-2 block">Pro koho je vhodné</label>
+            <div className="flex flex-col gap-2">
+              {skillLevels.map(skill => (
+                <button
+                  key={skill.value}
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, skill_level: skill.value }))}
+                  className={`w-full text-left px-4 py-3 rounded-xl transition ${
+                    form.skill_level === skill.value
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  <p className="font-semibold text-sm">{skill.label}</p>
+                  <p className={`text-xs mt-0.5 ${form.skill_level === skill.value ? 'text-orange-100' : 'text-gray-600'}`}>
+                    {skill.desc}
+                  </p>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -155,9 +244,9 @@ export default function AddTrail() {
             />
           </div>
 
-          {/* Typ trailu */}
+          {/* Oficiální / Neoficiální */}
           <div>
-            <label className="text-gray-400 text-sm mb-2 block">Typ trailu</label>
+            <label className="text-gray-400 text-sm mb-2 block">Viditelnost</label>
             <div className="flex gap-3">
               <button
                 type="button"
@@ -192,7 +281,7 @@ export default function AddTrail() {
           {/* Mapa */}
           <div>
             <label className="text-gray-400 text-sm mb-1 block">
-              Start trailu
+              Poloha
               <span className="text-gray-600 ml-1">— klikni na mapu, nebo se doplní z GPX</span>
             </label>
             <RouteMap
@@ -213,7 +302,7 @@ export default function AddTrail() {
           <GpxUpload onUpload={handleGpxUpload} />
 
           <ImageUpload
-            label="Fotografie trailu (nepovinné)"
+            label="Fotografie (nepovinné)"
             onUpload={url => setForm(prev => ({ ...prev, photo_url: url }))}
           />
 
@@ -233,7 +322,7 @@ export default function AddTrail() {
 
           <div>
             <label className="text-gray-400 text-sm mb-1 block">
-              Web trailu / bikeparku
+              Web místa
               <span className="text-gray-600 ml-1">(nepovinné)</span>
             </label>
             <input

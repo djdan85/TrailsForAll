@@ -6,23 +6,43 @@ import L from 'leaflet'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
-const officialIcon = L.icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-  iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-})
+// SVG ikony pro každý typ trailu
+const createTrailIcon = (type: string, isOfficial: boolean) => {
+  const color = isOfficial ? '#22c55e' : '#6b7280'
 
-const unofficialIcon = L.icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-black.png',
-  iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-})
+  const icons: { [key: string]: string } = {
+    singltrek: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
+      <text x="18" y="24" text-anchor="middle" font-size="18">🚵</text>
+    </svg>`,
+    pumptrack: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
+      <text x="18" y="24" text-anchor="middle" font-size="18">🔁</text>
+    </svg>`,
+    skatepark: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
+      <text x="18" y="24" text-anchor="middle" font-size="18">🛹</text>
+    </svg>`,
+    bikepark: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
+      <text x="18" y="24" text-anchor="middle" font-size="18">🏔️</text>
+    </svg>`,
+    crosscountry: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
+      <text x="18" y="24" text-anchor="middle" font-size="18">🛤️</text>
+    </svg>`,
+  }
+
+  const svg = icons[type] || icons.singltrek
+
+  return L.divIcon({
+    className: '',
+    html: svg,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -20],
+  })
+}
 
 const locationIcon = L.icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
@@ -101,20 +121,32 @@ const parseGpx = (text: string): [number, number][] => {
   return points
 }
 
+const trailTypeLabel: { [key: string]: string } = {
+  singltrek: '🚵 Singltrek',
+  pumptrack: '🔁 Pumptrack',
+  skatepark: '🛹 Skatepark',
+  bikepark: '🏔️ Bikepark',
+  crosscountry: '🛤️ Cross-country',
+}
+
+const skillLevelLabel: { [key: string]: string } = {
+  zacatecnik: '🟢 Začátečník',
+  pokrocily: '🔵 Pokročilý biker',
+  zkuseny: '🟠 Zkušený biker',
+  zabijak: '⚫ Zabijácký BIKER',
+  // zpětná kompatibilita se starými hodnotami
+  easy: '🟢 Lehká',
+  medium: '🟡 Střední',
+  hard: '🔴 Těžká',
+  expert: '⚫ Expert',
+}
+
 export default function Map({ trails }: { trails: any[] }) {
   const router = useRouter()
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
   const [locating, setLocating] = useState(false)
   const [gpxRoutes, setGpxRoutes] = useState<{ [trailId: string]: [number, number][] }>({})
 
-  const difficultyLabel: any = {
-    easy: 'Lehká',
-    medium: 'Střední',
-    hard: 'Těžká',
-    expert: 'Expert'
-  }
-
-  // Načti GPX trasy pro všechny traily které mají gpx_url
   useEffect(() => {
     trails.forEach(trail => {
       if (trail.gpx_url && !gpxRoutes[trail.id]) {
@@ -191,13 +223,18 @@ export default function Map({ trails }: { trails: any[] }) {
             <Marker
               key={trail.id}
               position={[trail.lat, trail.lng]}
-              icon={trail.is_official ? officialIcon : unofficialIcon}
+              icon={createTrailIcon(trail.trail_type || 'singltrek', trail.is_official)}
             >
               <Popup>
                 <div>
                   <h3 style={{ fontWeight: 'bold', marginBottom: '4px' }}>{trail.name}</h3>
                   <p style={{ color: '#888', fontSize: '12px' }}>{trail.location_name}</p>
-                  <p style={{ fontSize: '12px' }}>{difficultyLabel[trail.difficulty]} — {trail.length_km} km</p>
+                  <p style={{ fontSize: '12px' }}>
+                    {trailTypeLabel[trail.trail_type] || '🚵 Singltrek'}
+                  </p>
+                  <p style={{ fontSize: '12px' }}>
+                    {skillLevelLabel[trail.skill_level || trail.difficulty]} — {trail.length_km} km
+                  </p>
                   {!trail.is_official && (
                     <p style={{ fontSize: '11px', color: '#aaa', marginTop: '2px' }}>☠️ Neoficiální trail</p>
                   )}
@@ -226,6 +263,29 @@ export default function Map({ trails }: { trails: any[] }) {
         <ZoomControl />
         <FlyToLocation coords={userLocation} />
       </MapContainer>
+
+      {/* Legenda */}
+      <div style={{
+        position: 'absolute',
+        top: '10px',
+        right: '10px',
+        zIndex: 1000,
+        background: 'rgba(0,0,0,0.75)',
+        borderRadius: '10px',
+        padding: '8px 12px',
+        fontSize: '12px',
+        color: 'white',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+      }}>
+        <p style={{ fontWeight: 'bold', marginBottom: '2px', color: '#f97316' }}>Typy míst</p>
+        <p>🚵 Singltrek</p>
+        <p>🔁 Pumptrack</p>
+        <p>🛹 Skatepark</p>
+        <p>🏔️ Bikepark</p>
+        <p>🛤️ Cross-country</p>
+      </div>
 
       <button
         onTouchEnd={(e) => { e.preventDefault(); handleLocate() }}
