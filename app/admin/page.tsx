@@ -10,6 +10,47 @@ const RouteMap = dynamic(() => import('../components/RouteMap'), { ssr: false })
 
 const ADMIN_EMAIL = 'dalibor.pasek@gmail.com'
 
+const trailTypeOptions = [
+  { value: 'singltrek', label: '🚵 Singltrek / Trail' },
+  { value: 'pumptrack', label: '🔁 Pumptrack' },
+  { value: 'skatepark', label: '🛹 Skatepark' },
+  { value: 'bikepark', label: '🏔️ Bikepark' },
+  { value: 'crosscountry', label: '🛤️ Cross-country' },
+]
+
+const skillLevelOptions = [
+  { value: 'zacatecnik', label: '🟢 Začátečník' },
+  { value: 'pokrocily', label: '🔵 Pokročilý biker' },
+  { value: 'zkuseny', label: '🟠 Zkušený biker' },
+  { value: 'zabijak', label: '⚫ Zabiják BIKER' },
+]
+
+const trailTypeLabel: { [key: string]: string } = {
+  singltrek: '🚵 Singltrek',
+  pumptrack: '🔁 Pumptrack',
+  skatepark: '🛹 Skatepark',
+  bikepark: '🏔️ Bikepark',
+  crosscountry: '🛤️ Cross-country',
+}
+
+const skillLevelLabel: { [key: string]: string } = {
+  zacatecnik: '🟢 Začátečník',
+  pokrocily: '🔵 Pokročilý',
+  zkuseny: '🟠 Zkušený',
+  zabijak: '⚫ Zabiják',
+  easy: '🟢 Lehká',
+  medium: '🟡 Střední',
+  hard: '🔴 Těžká',
+  expert: '⚫ Expert',
+}
+
+const statusLabel: { [key: string]: string } = {
+  pending: 'Čeká na schválení',
+  approved: 'Schváleno',
+  rejected: 'Zamítnuto',
+  deleted: 'Smazáno'
+}
+
 export default function Admin() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -27,20 +68,13 @@ export default function Admin() {
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser()
-      if (!data.user) {
-        router.push('/')
-        return
-      }
+      if (!data.user) { router.push('/'); return }
 
       const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', data.user.id)
-        .single()
+        .from('profiles').select('*').eq('id', data.user.id).single()
 
       if (!profileData || (!['moderator', 'admin', 'superadmin'].includes(profileData.role) && data.user.email !== ADMIN_EMAIL)) {
-        router.push('/')
-        return
+        router.push('/'); return
       }
 
       setUser(data.user)
@@ -51,28 +85,12 @@ export default function Admin() {
   }, [])
 
   const fetchAll = async () => {
-    const { data: trailsData } = await supabase
-      .from('trails_with_profiles')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    const { data: reviewsData } = await supabase
-      .from('reviews')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    const { data: usersData } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false })
-
+    const { data: trailsData } = await supabase.from('trails_with_profiles').select('*').order('created_at', { ascending: false })
+    const { data: reviewsData } = await supabase.from('reviews').select('*').order('created_at', { ascending: false })
+    const { data: usersData } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
     const today = new Date()
     today.setDate(today.getDate() - 7)
-    const { data: membersData } = await supabase
-      .from('profiles')
-      .select('*')
-      .gte('created_at', today.toISOString())
-      .order('created_at', { ascending: false })
+    const { data: membersData } = await supabase.from('profiles').select('*').gte('created_at', today.toISOString()).order('created_at', { ascending: false })
 
     setTrails(trailsData || [])
     setReviews(reviewsData || [])
@@ -112,23 +130,21 @@ export default function Admin() {
     const lat = editRoutePoints.length > 0 ? editRoutePoints[0][0] : parseFloat(editingTrail.lat)
     const lng = editRoutePoints.length > 0 ? editRoutePoints[0][1] : parseFloat(editingTrail.lng)
 
-    const { error } = await supabase
-      .from('trails')
-      .update({
-        name: editingTrail.name,
-        description: editingTrail.description,
-        difficulty: editingTrail.difficulty,
-        length_km: parseFloat(editingTrail.length_km),
-        location_name: editingTrail.location_name,
-        lat,
-        lng,
-        photo_url: editingTrail.photo_url || null,
-        maps_url: editingTrail.maps_url || null,
-        is_official: editingTrail.is_official,
-        updated_at: new Date().toISOString(),
-        updated_by: user.id,
-      })
-      .eq('id', editingTrail.id)
+    const { error } = await supabase.from('trails').update({
+      name: editingTrail.name,
+      description: editingTrail.description,
+      trail_type: editingTrail.trail_type,
+      skill_level: editingTrail.skill_level,
+      length_km: parseFloat(editingTrail.length_km),
+      location_name: editingTrail.location_name,
+      lat, lng,
+      photo_url: editingTrail.photo_url || null,
+      maps_url: editingTrail.maps_url || null,
+      website_url: editingTrail.website_url || null,
+      is_official: editingTrail.is_official,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    }).eq('id', editingTrail.id)
 
     if (!error) {
       setEditingTrail(null)
@@ -138,34 +154,11 @@ export default function Admin() {
   }
 
   const isSuper = user?.email === ADMIN_EMAIL || profile?.role === 'admin' || profile?.role === 'superadmin'
-
-  const filteredTrails = filter === 'all'
-    ? trails.filter(t => t.status !== 'deleted')
-    : trails.filter(t => t.status === filter)
-
-  const statusLabel: any = {
-    pending: 'Čeká na schválení',
-    approved: 'Schváleno',
-    rejected: 'Zamítnuto',
-    deleted: 'Smazáno'
-  }
-
-  const difficultyLabel: any = {
-    easy: 'Lehká',
-    medium: 'Střední',
-    hard: 'Těžká',
-    expert: 'Expert'
-  }
+  const filteredTrails = filter === 'all' ? trails.filter(t => t.status !== 'deleted') : trails.filter(t => t.status === filter)
 
   const formatDate = (date: string) => {
     if (!date) return null
-    return new Date(date).toLocaleDateString('cs-CZ', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    return new Date(date).toLocaleDateString('cs-CZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
 
   if (loading) return (
@@ -177,70 +170,102 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-gray-950 pt-24 px-4 pb-10">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold text-white">Admin panel</h1>
-          <span className={`text-xs px-3 py-1 rounded-full font-semibold ${isSuper ? 'bg-orange-900 text-orange-300' : 'bg-blue-900 text-blue-300'}`}>
-            {isSuper ? 'Admin' : 'Moderátor'}
-          </span>
-        </div>
-        <p className="text-gray-400 mb-4">Správa trailů, recenzí a členů.</p>
 
-        {isSuper && (
-          <div className="mb-6">
-            <button
-              onClick={() => router.push('/admin/users')}
-              className="bg-gray-800 text-white px-6 py-2 rounded-xl text-sm hover:bg-gray-700 transition"
-            >
-              Správa uživatelů ({users.length})
-            </button>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Admin panel</h1>
+            <p className="text-gray-400 text-sm mt-1">Správa trailů, recenzí a členů.</p>
           </div>
-        )}
-
-        <div className="flex gap-2 mb-6 flex-wrap">
-          <button onClick={() => setTab('trails')} className={`px-6 py-2 rounded-xl font-semibold transition ${tab === 'trails' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
-            Traily ({trails.filter(t => t.status === 'pending').length})
-          </button>
-          <button onClick={() => setTab('reviews')} className={`px-6 py-2 rounded-xl font-semibold transition ${tab === 'reviews' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
-            Recenze ({reviews.filter(r => r.status === 'pending').length})
-          </button>
-          <button onClick={() => setTab('members')} className={`px-6 py-2 rounded-xl font-semibold transition ${tab === 'members' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
-            Noví členové ({newMembers.length})
-          </button>
+          <div className="flex items-center gap-3">
+            <span className={`text-xs px-3 py-1 rounded-full font-semibold ${isSuper ? 'bg-orange-900 text-orange-300' : 'bg-blue-900 text-blue-300'}`}>
+              {isSuper ? 'Admin' : 'Moderátor'}
+            </span>
+            {isSuper && (
+              <button
+                onClick={() => router.push('/admin/users')}
+                className="bg-gray-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-gray-700 transition"
+              >
+                👥 Uživatelé ({users.length})
+              </button>
+            )}
+          </div>
         </div>
 
+        {/* Statistiky */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="bg-gray-900 rounded-2xl p-4 text-center">
+            <p className="text-2xl font-bold text-orange-500">{trails.filter(t => t.status === 'pending').length}</p>
+            <p className="text-gray-400 text-xs mt-1">Ke schválení</p>
+          </div>
+          <div className="bg-gray-900 rounded-2xl p-4 text-center">
+            <p className="text-2xl font-bold text-green-400">{trails.filter(t => t.status === 'approved').length}</p>
+            <p className="text-gray-400 text-xs mt-1">Schválených trailů</p>
+          </div>
+          <div className="bg-gray-900 rounded-2xl p-4 text-center">
+            <p className="text-2xl font-bold text-yellow-400">{reviews.filter(r => r.status === 'pending').length}</p>
+            <p className="text-gray-400 text-xs mt-1">Recenzí ke schválení</p>
+          </div>
+        </div>
+
+        {/* Taby */}
+        <div className="flex gap-2 mb-6 bg-gray-900 rounded-2xl p-1.5">
+          {[
+            { key: 'trails', label: '🚵 Traily', count: trails.filter(t => t.status === 'pending').length },
+            { key: 'reviews', label: '⭐ Recenze', count: reviews.filter(r => r.status === 'pending').length },
+            { key: 'members', label: '👥 Noví členové', count: newMembers.length },
+          ].map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key as any)}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition ${
+                tab === t.key ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              {t.label}
+              {t.count > 0 && (
+                <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${tab === t.key ? 'bg-orange-600' : 'bg-gray-700'}`}>
+                  {t.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab: Noví členové */}
         {tab === 'members' && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             <p className="text-gray-400 text-sm">Bikeři registrovaní v posledních 7 dnech.</p>
             {newMembers.length === 0 && <p className="text-gray-400">Žádní noví členové.</p>}
             {newMembers.map((member) => (
-              <div key={member.id} className="bg-gray-900 rounded-2xl p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-white font-bold text-lg">{member.username || member.email?.split('@')[0]}</h3>
-                    <p className="text-gray-400 text-sm">{member.email}</p>
-                    {member.city && <p className="text-gray-400 text-sm">{member.city}</p>}
-                  </div>
-                  <p className="text-gray-600 text-xs">{formatDate(member.created_at)}</p>
+              <div key={member.id} className="bg-gray-900 rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-white font-bold">{member.username || member.email?.split('@')[0]}</h3>
+                  <p className="text-gray-400 text-sm">{member.email}</p>
+                  {member.city && <p className="text-gray-500 text-xs">{member.city}</p>}
                 </div>
+                <p className="text-gray-600 text-xs">{formatDate(member.created_at)}</p>
               </div>
             ))}
           </div>
         )}
 
+        {/* Tab: Traily */}
         {tab === 'trails' && (
           <>
+            {/* Filtr statusu */}
             <div className="flex gap-2 mb-6 flex-wrap">
               {(['pending', 'all', 'approved', 'rejected', 'deleted'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${filter === f ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                  className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${filter === f ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
                 >
                   {f === 'all' ? 'Všechny' :
-                   f === 'pending' ? `Ke schválení (${trails.filter(t => t.status === 'pending').length})` :
-                   f === 'approved' ? 'Schválené' :
-                   f === 'rejected' ? 'Zamítnuté' :
-                   `Koš (${trails.filter(t => t.status === 'deleted').length})`}
+                   f === 'pending' ? `⏳ Ke schválení (${trails.filter(t => t.status === 'pending').length})` :
+                   f === 'approved' ? '✅ Schválené' :
+                   f === 'rejected' ? '❌ Zamítnuté' :
+                   `🗑 Koš (${trails.filter(t => t.status === 'deleted').length})`}
                 </button>
               ))}
             </div>
@@ -248,84 +273,96 @@ export default function Admin() {
             <div className="flex flex-col gap-4">
               {filteredTrails.length === 0 && <p className="text-gray-400">Žádné traily.</p>}
               {filteredTrails.map((trail) => (
-                <div key={trail.id} className={`rounded-2xl p-6 ${trail.status === 'deleted' ? 'bg-red-950 border border-red-900' : 'bg-gray-900'}`}>
+                <div key={trail.id} className={`rounded-2xl overflow-hidden ${trail.status === 'deleted' ? 'bg-red-950 border border-red-900' : 'bg-gray-900'}`}>
                   {editingTrail?.id === trail.id ? (
-                    <div className="flex flex-col gap-3">
-                      <h2 className="text-orange-500 font-bold text-lg mb-1">Editace trailu</h2>
-                      <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.name} onChange={e => setEditingTrail({...editingTrail, name: e.target.value})} placeholder="Název" />
-                      <textarea className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" rows={3} value={editingTrail.description} onChange={e => setEditingTrail({...editingTrail, description: e.target.value})} placeholder="Popis" />
-                      <select className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.difficulty} onChange={e => setEditingTrail({...editingTrail, difficulty: e.target.value})}>
-                        <option value="easy">Lehká</option>
-                        <option value="medium">Střední</option>
-                        <option value="hard">Těžká</option>
-                        <option value="expert">Expert</option>
-                      </select>
-                      <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.length_km} onChange={e => setEditingTrail({...editingTrail, length_km: e.target.value})} placeholder="Délka (km)" type="number" />
-                      <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.location_name} onChange={e => setEditingTrail({...editingTrail, location_name: e.target.value})} placeholder="Lokalita" />
+                    // --- EDITACE ---
+                    <div className="p-6 flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-orange-500 font-bold text-lg">✏️ Editace trailu</h2>
+                        <button onClick={() => { setEditingTrail(null); setEditRoutePoints([]) }} className="text-gray-500 hover:text-white text-sm transition">✕ Zrušit</button>
+                      </div>
 
-                      {/* Mapa pro přesunutí pinu */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-gray-400 text-xs mb-1 block">Název</label>
+                          <input className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-orange-500 text-sm" value={editingTrail.name} onChange={e => setEditingTrail({...editingTrail, name: e.target.value})} placeholder="Název" />
+                        </div>
+                        <div>
+                          <label className="text-gray-400 text-xs mb-1 block">Lokalita</label>
+                          <input className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-orange-500 text-sm" value={editingTrail.location_name} onChange={e => setEditingTrail({...editingTrail, location_name: e.target.value})} placeholder="Lokalita" />
+                        </div>
+                      </div>
+
                       <div>
-                        <label className="text-gray-400 text-sm mb-1 block">
-                          Start trailu
-                          <span className="text-gray-600 ml-1">— klikni na mapu pro přesunutí pinu</span>
-                        </label>
+                        <label className="text-gray-400 text-xs mb-1 block">Popis</label>
+                        <textarea className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-orange-500 text-sm" rows={3} value={editingTrail.description} onChange={e => setEditingTrail({...editingTrail, description: e.target.value})} placeholder="Popis" />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-gray-400 text-xs mb-1 block">Typ místa</label>
+                          <select className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-orange-500 text-sm" value={editingTrail.trail_type || 'singltrek'} onChange={e => setEditingTrail({...editingTrail, trail_type: e.target.value})}>
+                            {trailTypeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-gray-400 text-xs mb-1 block">Pro koho</label>
+                          <select className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-orange-500 text-sm" value={editingTrail.skill_level || 'zacatecnik'} onChange={e => setEditingTrail({...editingTrail, skill_level: e.target.value})}>
+                            {skillLevelOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-gray-400 text-xs mb-1 block">Délka (km)</label>
+                          <input className="w-full bg-gray-800 text-white rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-orange-500 text-sm" type="number" value={editingTrail.length_km} onChange={e => setEditingTrail({...editingTrail, length_km: e.target.value})} placeholder="Délka (km)" />
+                        </div>
+                        <div>
+                          <label className="text-gray-400 text-xs mb-1 block">Viditelnost</label>
+                          <div className="flex gap-2 h-[42px]">
+                            <button type="button" onClick={() => setEditingTrail({...editingTrail, is_official: true})} className={`flex-1 rounded-xl text-xs font-semibold transition ${editingTrail.is_official ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>✅ Oficiální</button>
+                            <button type="button" onClick={() => setEditingTrail({...editingTrail, is_official: false})} className={`flex-1 rounded-xl text-xs font-semibold transition ${!editingTrail.is_official ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>☠️ Neoficiální</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-gray-400 text-xs mb-1 block">Poloha startu — klikni na mapu</label>
                         <RouteMap
                           points={editRoutePoints.length > 0 ? editRoutePoints : (editingTrail.lat && editingTrail.lng ? [[parseFloat(editingTrail.lat), parseFloat(editingTrail.lng)]] : [])}
                           onChange={setEditRoutePoints}
                         />
                         {editRoutePoints.length > 0 && (
-                          <p className="text-gray-600 text-xs mt-1">
-                            📍 {editRoutePoints[0][0].toFixed(5)}, {editRoutePoints[0][1].toFixed(5)}
-                          </p>
+                          <p className="text-gray-600 text-xs mt-1">📍 {editRoutePoints[0][0].toFixed(5)}, {editRoutePoints[0][1].toFixed(5)}</p>
                         )}
                       </div>
 
-                      <div>
-                        <label className="text-gray-400 text-sm mb-2 block">Typ trailu</label>
-                        <div className="flex gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setEditingTrail({...editingTrail, is_official: true})}
-                            className={`flex-1 py-2 rounded-xl font-semibold text-sm transition ${editingTrail.is_official ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
-                          >
-                            ✅ Oficiální
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingTrail({...editingTrail, is_official: false})}
-                            className={`flex-1 py-2 rounded-xl font-semibold text-sm transition ${!editingTrail.is_official ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
-                          >
-                            ☠️ Neoficiální
-                          </button>
-                        </div>
+                      <ImageUpload label="Fotografie" onUpload={url => setEditingTrail({...editingTrail, photo_url: url})} />
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <input className="bg-gray-800 text-white rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-orange-500 text-sm" value={editingTrail.maps_url || ''} onChange={e => setEditingTrail({...editingTrail, maps_url: e.target.value})} placeholder="Odkaz na Mapy.com" />
+                        <input className="bg-gray-800 text-white rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-orange-500 text-sm" value={editingTrail.website_url || ''} onChange={e => setEditingTrail({...editingTrail, website_url: e.target.value})} placeholder="Web místa" />
                       </div>
 
-                      <ImageUpload label="Fotografie trailu" onUpload={url => setEditingTrail({...editingTrail, photo_url: url})} />
-                      <input className="bg-gray-800 text-white rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500" value={editingTrail.maps_url || ''} onChange={e => setEditingTrail({...editingTrail, maps_url: e.target.value})} placeholder="Odkaz na Mapy.com" />
-                      <div className="flex gap-3 mt-2">
-                        <button onClick={saveTrailEdit} className="bg-orange-500 text-white px-6 py-2 rounded-xl text-sm hover:bg-orange-600 transition">Uložit</button>
-                        <button onClick={() => { setEditingTrail(null); setEditRoutePoints([]) }} className="bg-gray-700 text-white px-6 py-2 rounded-xl text-sm hover:bg-gray-600 transition">Zrušit</button>
+                      <div className="flex gap-3">
+                        <button onClick={saveTrailEdit} className="flex-1 bg-orange-500 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-orange-600 transition">💾 Uložit změny</button>
+                        <button onClick={() => { setEditingTrail(null); setEditRoutePoints([]) }} className="bg-gray-700 text-white px-6 py-2.5 rounded-xl text-sm hover:bg-gray-600 transition">Zrušit</button>
                       </div>
                     </div>
                   ) : (
-                    <>
+                    // --- ZOBRAZENÍ ---
+                    <div className="p-5">
                       <div className="flex items-start justify-between mb-3">
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h2 className="text-white font-bold text-xl">{trail.name}</h2>
+                            <h2 className="text-white font-bold text-lg">{trail.name}</h2>
                             {trail.is_official ? (
-                              <span className="text-xs px-2 py-0.5 rounded-lg border border-green-400/30 text-green-400 bg-gray-800">
-                                ✅ Oficiální
-                              </span>
+                              <span className="text-xs px-2 py-0.5 rounded-lg border border-green-400/30 text-green-400 bg-gray-800">✅ Oficiální</span>
                             ) : (
-                              <span className="text-xs px-2 py-0.5 rounded-lg border border-orange-400/30 text-orange-400 bg-gray-800">
-                                ☠️ Neoficiální
-                              </span>
+                              <span className="text-xs px-2 py-0.5 rounded-lg border border-orange-400/30 text-orange-400 bg-gray-800">☠️ Neoficiální</span>
                             )}
                           </div>
                           <p className="text-gray-400 text-sm">{trail.location_name}</p>
                         </div>
-                        <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
+                        <span className={`ml-3 shrink-0 text-xs px-3 py-1 rounded-full font-semibold ${
                           trail.status === 'pending' ? 'bg-yellow-900 text-yellow-400' :
                           trail.status === 'approved' ? 'bg-green-900 text-green-400' :
                           trail.status === 'deleted' ? 'bg-red-900 text-red-400' :
@@ -334,36 +371,52 @@ export default function Admin() {
                           {statusLabel[trail.status]}
                         </span>
                       </div>
+
                       {trail.photo_url && (
-                        <img src={trail.photo_url} alt={trail.name} className="w-full h-40 object-cover rounded-xl mb-3" />
+                        <img src={trail.photo_url} alt={trail.name} className="w-full h-36 object-cover rounded-xl mb-3" />
                       )}
-                      <p className="text-gray-300 text-sm mb-3">{trail.description}</p>
-                      <div className="flex gap-3 text-sm text-gray-400 mb-3 flex-wrap">
-                        <span>{difficultyLabel[trail.difficulty]}</span>
-                        <span>·</span>
-                        <span>{trail.length_km} km</span>
+
+                      <p className="text-gray-300 text-sm mb-3 line-clamp-2">{trail.description}</p>
+
+                      <div className="flex gap-2 flex-wrap mb-3">
+                        <span className="bg-gray-800 text-gray-300 text-xs px-2 py-1 rounded-lg">
+                          {trailTypeLabel[trail.trail_type] || '🚵 Singltrek'}
+                        </span>
+                        <span className="bg-gray-800 text-gray-300 text-xs px-2 py-1 rounded-lg">
+                          {skillLevelLabel[trail.skill_level || trail.difficulty] || '🟢 Začátečník'}
+                        </span>
+                        <span className="bg-gray-800 text-gray-300 text-xs px-2 py-1 rounded-lg">
+                          📏 {trail.length_km} km
+                        </span>
+                        {trail.region && (
+                          <span className="bg-gray-800 text-gray-300 text-xs px-2 py-1 rounded-lg">
+                            🗺️ {trail.region}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex flex-col gap-1 mb-4">
+
+                      <div className="flex flex-col gap-0.5 mb-4">
                         <p className="text-gray-600 text-xs">Přidal: {trail.created_by_username || 'Neznámý'} — {formatDate(trail.created_at)}</p>
                         {trail.approved_at && <p className="text-gray-600 text-xs">Schválil: {trail.approved_by_username || 'Admin'} — {formatDate(trail.approved_at)}</p>}
                         {trail.updated_at && <p className="text-gray-600 text-xs">Upravil: {trail.updated_by_username || 'Admin'} — {formatDate(trail.updated_at)}</p>}
                       </div>
-                      <div className="flex gap-3 flex-wrap">
+
+                      <div className="flex gap-2 flex-wrap">
                         {trail.status === 'deleted' ? (
                           <>
-                            <button onClick={() => updateTrailStatus(trail.id, 'pending')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">Obnovit</button>
-                            {isSuper && <button onClick={() => deleteTrailPermanently(trail.id)} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">Trvale smazat</button>}
+                            <button onClick={() => updateTrailStatus(trail.id, 'pending')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">♻️ Obnovit</button>
+                            {isSuper && <button onClick={() => deleteTrailPermanently(trail.id)} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">🗑 Trvale smazat</button>}
                           </>
                         ) : (
                           <>
-                            {trail.status !== 'approved' && <button onClick={() => updateTrailStatus(trail.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">Schválit</button>}
-                            {trail.status !== 'rejected' && <button onClick={() => updateTrailStatus(trail.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">Zamítnout</button>}
-                            <button onClick={() => { setEditingTrail({...trail}); setEditRoutePoints(trail.lat && trail.lng ? [[parseFloat(trail.lat), parseFloat(trail.lng)]] : []) }} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition">Upravit</button>
-                            <button onClick={() => updateTrailStatus(trail.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">Do koše</button>
+                            {trail.status !== 'approved' && <button onClick={() => updateTrailStatus(trail.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">✅ Schválit</button>}
+                            {trail.status !== 'rejected' && <button onClick={() => updateTrailStatus(trail.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">❌ Zamítnout</button>}
+                            <button onClick={() => { setEditingTrail({...trail}); setEditRoutePoints(trail.lat && trail.lng ? [[parseFloat(trail.lat), parseFloat(trail.lng)]] : []) }} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition">✏️ Upravit</button>
+                            <button onClick={() => updateTrailStatus(trail.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">🗑 Do koše</button>
                           </>
                         )}
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               ))}
@@ -371,14 +424,15 @@ export default function Admin() {
           </>
         )}
 
+        {/* Tab: Recenze */}
         {tab === 'reviews' && (
           <div className="flex flex-col gap-4">
             {reviews.filter(r => r.status !== 'deleted').length === 0 && <p className="text-gray-400">Žádné recenze.</p>}
             {reviews.map((review) => (
-              <div key={review.id} className={`rounded-2xl p-6 ${review.status === 'deleted' ? 'bg-red-950 border border-red-900' : 'bg-gray-900'}`}>
+              <div key={review.id} className={`rounded-2xl p-5 ${review.status === 'deleted' ? 'bg-red-950 border border-red-900' : 'bg-gray-900'}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <span className="text-orange-500 font-semibold">{review.rating} hvězdičky</span>
+                    <span className="text-orange-500 font-semibold">{'⭐'.repeat(review.rating)}</span>
                     <p className="text-gray-400 text-xs mt-1">{formatDate(review.created_at)}</p>
                   </div>
                   <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
@@ -391,17 +445,17 @@ export default function Admin() {
                   </span>
                 </div>
                 <p className="text-white text-sm mb-4">{review.comment}</p>
-                <div className="flex gap-3 flex-wrap">
+                <div className="flex gap-2 flex-wrap">
                   {review.status === 'deleted' ? (
                     <>
-                      <button onClick={() => updateReviewStatus(review.id, 'pending')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">Obnovit</button>
-                      {isSuper && <button onClick={() => deleteReviewPermanently(review.id)} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">Trvale smazat</button>}
+                      <button onClick={() => updateReviewStatus(review.id, 'pending')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">♻️ Obnovit</button>
+                      {isSuper && <button onClick={() => deleteReviewPermanently(review.id)} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">🗑 Trvale smazat</button>}
                     </>
                   ) : (
                     <>
-                      {review.status !== 'approved' && <button onClick={() => updateReviewStatus(review.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">Schválit</button>}
-                      {review.status !== 'rejected' && <button onClick={() => updateReviewStatus(review.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">Zamítnout</button>}
-                      <button onClick={() => updateReviewStatus(review.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">Do koše</button>
+                      {review.status !== 'approved' && <button onClick={() => updateReviewStatus(review.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">✅ Schválit</button>}
+                      {review.status !== 'rejected' && <button onClick={() => updateReviewStatus(review.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">❌ Zamítnout</button>}
+                      <button onClick={() => updateReviewStatus(review.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">🗑 Do koše</button>
                     </>
                   )}
                 </div>
