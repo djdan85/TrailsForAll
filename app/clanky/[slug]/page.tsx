@@ -73,7 +73,7 @@ export default function ClanekDetail() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-950 pt-20 px-4 pb-10">
+    <div className="min-h-screen bg-gray-950 pt-24 px-4 pb-10">
       <div className="max-w-3xl mx-auto">
 
         <button
