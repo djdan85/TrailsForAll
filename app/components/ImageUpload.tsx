@@ -103,3 +103,4 @@ export default function ImageUpload({ onUpload, label = 'Nahrát obrázek' }: Im
     </div>
   )
 }
+

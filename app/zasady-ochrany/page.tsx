@@ -13,7 +13,7 @@ export default function ZasadyOchrany() {
           <div className="bg-gray-900 rounded-2xl p-8">
             <h2 className="text-xl font-bold text-white mb-4">Správce osobních údajů</h2>
             <p className="text-gray-300 leading-relaxed">
-              Správcem osobních údajů je Dalibor Pašek, provozovatel webu Trail For All.
+              Správcem osobních údajů je Dalibor Pašek, provozovatel webu Trails For All.
             </p>
             <p className="text-gray-300 leading-relaxed mt-2">
               Kontakt: info@pasek-art.cz
@@ -71,3 +71,4 @@ export default function ZasadyOchrany() {
     </div>
   )
 }
+

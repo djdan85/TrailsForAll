@@ -315,3 +315,4 @@ export default function Map({ trails }: { trails: any[] }) {
     </div>
   )
 }
+

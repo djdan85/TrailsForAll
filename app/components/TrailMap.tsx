@@ -175,3 +175,4 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl }: Props) 
     </div>
   )
 }
+

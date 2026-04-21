@@ -108,3 +108,4 @@ export default function RouteMap({ points, onChange }: Props) {
     </div>
   )
 }
+

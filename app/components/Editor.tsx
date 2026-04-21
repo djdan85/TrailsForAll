@@ -73,3 +73,4 @@ export default function Editor({ content, onChange }: EditorProps) {
     </div>
   )
 }
+

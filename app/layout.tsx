@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Trail For All',
+  title: 'Trails For All',
   description: 'Komunitní mapa trailů pro bikery',
 }
 
@@ -36,3 +36,4 @@ export default function RootLayout({
     </html>
   )
 }
+
