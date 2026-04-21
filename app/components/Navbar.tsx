@@ -4,13 +4,16 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const router = useRouter()
+  const pathname = usePathname()
+
+  const isHomePage = pathname === '/'
 
   useEffect(() => {
     const getData = async () => {
@@ -67,6 +70,14 @@ export default function Navbar() {
         </Link>
 
         <div className="hidden md:flex items-center gap-6">
+          {!isHomePage && (
+            <button
+              onClick={() => router.back()}
+              className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition flex items-center gap-1"
+            >
+              ← Zpět
+            </button>
+          )}
           <Link href="/" className="text-white hover:text-orange-500 transition">
             Mapa
           </Link>
@@ -125,6 +136,14 @@ export default function Navbar() {
 
       {menuOpen && (
         <div className="md:hidden bg-black border-t border-orange-500 px-4 py-3 flex flex-col gap-3">
+          {!isHomePage && (
+            <button
+              onClick={() => { router.back(); setMenuOpen(false) }}
+              className="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-semibold text-left transition hover:bg-gray-700"
+            >
+              ← Zpět
+            </button>
+          )}
           <Link href="/" className="text-white hover:text-orange-500" onClick={() => setMenuOpen(false)}>
             Mapa
           </Link>
