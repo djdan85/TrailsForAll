@@ -136,7 +136,7 @@ export default function Trails() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-950 pt-24 px-4 pb-10">
+    <div className="min-h-screen bg-gray-950 pt-28 px-4 pb-10">
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold text-white mb-2">Traily</h1>
         <p className="text-gray-400 mb-6">Všechny schválené traily v databázi.</p>

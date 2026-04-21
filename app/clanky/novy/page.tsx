@@ -85,7 +85,7 @@ export default function NovyClanek() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 pt-24 px-4 pb-10">
+    <div className="min-h-screen bg-gray-950 pt-28 px-4 pb-10">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-white mb-2">Nový článek</h1>
         <p className="text-gray-400 mb-8">Vytvoř nový článek pro komunitu.</p>

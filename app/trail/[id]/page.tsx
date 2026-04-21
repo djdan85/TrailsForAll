@@ -128,7 +128,7 @@ export default function TrailDetail() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-950 pt-24 px-4 pb-10">
+    <div className="min-h-screen bg-gray-950 pt-28 px-4 pb-10">
       <div className="max-w-2xl mx-auto">
 
         <button

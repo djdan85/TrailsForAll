@@ -229,7 +229,7 @@ export default function Komunita() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-950 pt-24 px-4 pb-16">
+    <div className="min-h-screen bg-gray-950 pt-28 px-4 pb-16">
       <div className="max-w-5xl mx-auto">
 
         <h1 className="text-4xl font-bold text-white mb-2">Komunita</h1>
