@@ -7,13 +7,13 @@ export default function ONas() {
 
         <div className="mb-12 text-center">
           <h1 className="text-4xl font-bold text-white mb-4">O nás</h1>
-          <p className="text-orange-500 text-lg font-semibold">Trails for All — traily pro všechny generace</p>
+          <p className="text-orange-500 text-lg font-semibold">Trail For All — traily pro všechny generace</p>
         </div>
 
         <div className="bg-gray-900 rounded-2xl p-8 mb-6">
           <h2 className="text-xl font-bold text-white mb-4">Jak to celé vzniklo</h2>
           <p className="text-gray-300 leading-relaxed mb-4">
-            Čau, jsem Dalibor Pašek — kamarádi mi říkají Dane. Kolo je moje srdeční záležitost a traily jsou to, kvůli čemu ráno vstávám. Trails for All jsem rozjel prostě proto, že jsem nenašel appku, která by mi seděla a přitom nestála majlant.
+            Čau, jsem Dalibor Pašek — kamarádi mi říkají Dane. Kolo je moje srdeční záležitost a traily jsou to, kvůli čemu ráno vstávám. Trail For All jsem rozjel prostě proto, že jsem nenašel appku, která by mi seděla a přitom nestála majlant.
           </p>
           <p className="text-gray-300 leading-relaxed">
             Chci být součástí parády, kde si lidi pomáhají, jedou spolu a táhnou za jeden provaz. Jestli jsi fanoušek dětské dráhy, mladej závodník, táta s dětma nebo ostřílený matador co pamatuje první hardtaily — je jedno. Spojuje nás jedno: šlápnout do pedálů a pořádně si to rozdat.
@@ -33,11 +33,11 @@ export default function ONas() {
         <div className="bg-gray-900 rounded-2xl p-8 mb-6">
           <h2 className="text-xl font-bold text-white mb-4">Zdarma — a tak to myslíme!</h2>
           <p className="text-gray-300 leading-relaxed mb-4">
-            Trails for All je teď v testovacím provozu — zkoušíme, ladíme a stavíme. Pro uživatele je všechno zdarma a žádné předplatné neplánujeme. Pokud jednou přijde reklama, bude vždy nenápadná a nikdy nepřebije to podstatné. Prostě jako dobrý parťák na trail — jede vedle tebe, netlačí se před tebe.
+            Trail For All je teď v testovacím provozu — zkoušíme, ladíme a stavíme. Pro uživatele je všechno zdarma a žádné předplatné neplánujeme. Pokud jednou přijde reklama, bude vždy nenápadná a nikdy nepřebije to podstatné. Prostě jako dobrý parťák na trail — jede vedle tebe, netlačí se před tebe.
           </p>
           <h3 className="text-white font-semibold mb-3">Chceš nám pomoct?</h3>
           <p className="text-gray-300 leading-relaxed mb-4">
-            Projekt provozujeme z vlastní kapsy — doména, hosting, vývoj. Pokud tě Trails for All baví, jakýkoliv příspěvek nás posune dál. Není to povinnost — je to jen gesto od bikera bikerům. 🤜🤛
+            Projekt provozujeme z vlastní kapsy — doména, hosting, vývoj. Pokud tě Trail For All baví, jakýkoliv příspěvek nás posune dál. Není to povinnost — je to jen gesto od bikera bikerům. 🤜🤛
           </p>
           <button
             onClick={() => window.location.href = 'mailto:info@pasek-art.cz'}
@@ -71,7 +71,7 @@ export default function ONas() {
         <div className="bg-gray-900 rounded-2xl p-8 mb-6">
           <h2 className="text-xl font-bold text-white mb-4">Pomůžeš nám rozjet to naplno?</h2>
           <p className="text-gray-300 leading-relaxed mb-4">
-            Jsem otevřený každé pomocné ruce. Jestli umíš kódovat, fotit traily, píšeš dobře nebo prostě znáš parádní místa k ježdění — ozvi se. Trails for All stavíme společně a každý, kdo přiloží ruku k dílu, je vítaný člen party.
+            Jsem otevřený každé pomocné ruce. Jestli umíš kódovat, fotit traily, píšeš dobře nebo prostě znáš parádní místa k ježdění — ozvi se. Trail For All stavíme společně a každý, kdo přiloží ruku k dílu, je vítaný člen party.
           </p>
           <p className="text-gray-300 leading-relaxed">
             Tady nejde o ego, jde o kola, blato a dobrý pocit po parádní jízdě. 🚵

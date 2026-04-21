@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Trails for All',
+  title: 'Trail For All',
   description: 'Komunitní mapa trailů pro bikery',
 }
 

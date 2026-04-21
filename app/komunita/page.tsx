@@ -233,7 +233,7 @@ export default function Komunita() {
       <div className="max-w-5xl mx-auto">
 
         <h1 className="text-4xl font-bold text-white mb-2">Komunita</h1>
-        <p className="text-gray-400 mb-10">Poznej lidi za Trails for All.</p>
+        <p className="text-gray-400 mb-10">Poznej lidi za Trail For All.</p>
 
         {/* Čekající žádosti o přátelství */}
         {pendingRequests.length > 0 && (
@@ -249,7 +249,7 @@ export default function Komunita() {
         {team.length > 0 && (
           <div className="mb-12">
             <h2 className="text-2xl font-bold text-white mb-2">Náš tým</h2>
-            <p className="text-gray-400 mb-6">Lidé kteří stojí za Trails for All.</p>
+            <p className="text-gray-400 mb-6">Lidé kteří stojí za Trail For All.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {team.map(profile => (
                 <ProfileCard key={profile.id} profile={profile} isTeam={true} />
@@ -263,7 +263,7 @@ export default function Komunita() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-2xl font-bold text-white mb-1">Bikeři</h2>
-              <p className="text-gray-400">Komunita Trails for All ({members.length} členů)</p>
+              <p className="text-gray-400">Komunita Trail For All ({members.length} členů)</p>
             </div>
           </div>
 

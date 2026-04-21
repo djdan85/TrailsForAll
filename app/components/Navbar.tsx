@@ -62,7 +62,7 @@ export default function Navbar() {
         <Link href="/">
           <Image
             src="/logo.png"
-            alt="Trails for All"
+            alt="Trail For All"
             width={120}
             height={50}
             className="object-contain"
