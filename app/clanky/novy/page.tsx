@@ -34,7 +34,7 @@ export default function NovyClanek() {
         .eq('id', data.user.id)
         .single()
 
-      if (!profile || !['editor', 'admin', 'superadmin'].includes(profile.role)) {
+      if (!profile || !['moderator', 'admin', 'superadmin'].includes(profile.role)) {
         router.push('/')
         return
       }

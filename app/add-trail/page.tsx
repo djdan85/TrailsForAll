@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useRouter } from 'next/navigation'
-import ImageUpload from '../components/ImageUpload'
+import MultiImageUpload, { UploadedPhoto } from '../components/MultiImageUpload'
 import GpxUpload from '../components/GpxUpload'
 import dynamic from 'next/dynamic'
 
@@ -68,6 +68,7 @@ export default function AddTrail() {
   const [routePoints, setRoutePoints] = useState<[number, number][]>([])
   const [gpxUrl, setGpxUrl] = useState('')
   const [region, setRegion] = useState('')
+  const [photos, setPhotos] = useState<UploadedPhoto[]>([])
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -75,7 +76,6 @@ export default function AddTrail() {
     skill_level: 'zacatecnik',
     length_km: '',
     location_name: '',
-    photo_url: '',
     maps_url: '',
     website_url: '',
     is_official: true,
@@ -113,34 +113,57 @@ export default function AddTrail() {
     setMessage('')
 
     const startPoint = routePoints[0]
+    const primaryPhoto = photos.find(p => p.is_primary) || photos[0] || null
 
-    const { error } = await supabase.from('trails').insert({
-      name: form.name,
-      description: form.description,
-      trail_type: form.trail_type,
-      skill_level: form.skill_level,
-      length_km: parseFloat(form.length_km),
-      location_name: form.location_name,
-      lat: startPoint[0],
-      lng: startPoint[1],
-      gpx_url: gpxUrl || null,
-      photo_url: form.photo_url || null,
-      maps_url: form.maps_url || null,
-      website_url: form.website_url || null,
-      is_official: form.is_official,
-      region: region || null,
-      created_by: user.id,
-      status: 'pending'
-    })
+    const { data: trailData, error: trailError } = await supabase
+      .from('trails')
+      .insert({
+        name: form.name,
+        description: form.description,
+        trail_type: form.trail_type,
+        skill_level: form.skill_level,
+        length_km: form.length_km ? parseFloat(form.length_km) : null,
+        location_name: form.location_name,
+        lat: startPoint[0],
+        lng: startPoint[1],
+        gpx_url: gpxUrl || null,
+        photo_url: primaryPhoto?.url || null,
+        maps_url: form.maps_url || null,
+        website_url: form.website_url || null,
+        is_official: form.is_official,
+        region: region || null,
+        created_by: user.id,
+        status: 'pending',
+      })
+      .select()
+      .single()
 
-    if (error) setMessage('Chyba: ' + error.message)
-    else setMessage('Trail byl odeslán ke schválení!')
+    if (trailError) {
+      setMessage('Chyba: ' + trailError.message)
+      setLoading(false)
+      return
+    }
 
+    // Uložení fotek do trail_photos
+    if (photos.length > 0) {
+      const photosToInsert = photos.map((p) => ({
+        trail_id: trailData.id,
+        url: p.url,
+        is_primary: p.is_primary,
+        display_order: p.display_order,
+      }))
+      const { error: photosError } = await supabase
+        .from('trail_photos')
+        .insert(photosToInsert)
+      if (photosError) {
+        console.error('Chyba při ukládání fotek:', photosError.message)
+      }
+    }
+
+    setMessage('Místo bylo odesláno ke schválení! ✅')
     setLoading(false)
+    setTimeout(() => router.push('/trails'), 2000)
   }
-
-  const selectedType = trailTypes.find(t => t.value === form.trail_type)
-  const selectedSkill = skillLevels.find(s => s.value === form.skill_level)
 
   return (
     <div className="min-h-screen bg-gray-950 pt-28 px-4 pb-10">
@@ -148,8 +171,9 @@ export default function AddTrail() {
         <h1 className="text-3xl font-bold text-white mb-2">Přidat místo</h1>
         <p className="text-gray-400 mb-8">Místo bude po odeslání čekat na schválení adminem.</p>
 
-        <div className="bg-gray-900 rounded-2xl p-6 flex flex-col gap-4">
+        <div className="bg-gray-900 rounded-2xl p-6 flex flex-col gap-6">
 
+          {/* Název */}
           <div>
             <label className="text-gray-400 text-sm mb-1 block">Název</label>
             <input
@@ -161,6 +185,7 @@ export default function AddTrail() {
             />
           </div>
 
+          {/* Popis */}
           <div>
             <label className="text-gray-400 text-sm mb-1 block">Popis</label>
             <textarea
@@ -221,6 +246,7 @@ export default function AddTrail() {
             </div>
           </div>
 
+          {/* Délka */}
           <div>
             <label className="text-gray-400 text-sm mb-1 block">Délka (km)</label>
             <input
@@ -233,6 +259,7 @@ export default function AddTrail() {
             />
           </div>
 
+          {/* Lokalita */}
           <div>
             <label className="text-gray-400 text-sm mb-1 block">Lokalita</label>
             <input
@@ -299,13 +326,25 @@ export default function AddTrail() {
             )}
           </div>
 
+          {/* GPX */}
           <GpxUpload onUpload={handleGpxUpload} />
 
-          <ImageUpload
-            label="Fotografie (nepovinné)"
-            onUpload={url => setForm(prev => ({ ...prev, photo_url: url }))}
-          />
+          {/* Fotografie */}
+          <div>
+            <label className="text-gray-400 text-sm mb-2 block">
+              Fotografie
+              <span className="text-gray-600 ml-1">(nepovinné, max 10)</span>
+            </label>
+            <div className="bg-gray-800 rounded-xl p-4">
+              <MultiImageUpload
+                value={photos}
+                onChange={setPhotos}
+                maxPhotos={10}
+              />
+            </div>
+          </div>
 
+          {/* Mapy.com */}
           <div>
             <label className="text-gray-400 text-sm mb-1 block">
               Mapy.com odkaz
@@ -320,6 +359,7 @@ export default function AddTrail() {
             />
           </div>
 
+          {/* Web místa */}
           <div>
             <label className="text-gray-400 text-sm mb-1 block">
               Web místa
@@ -335,7 +375,9 @@ export default function AddTrail() {
           </div>
 
           {message && (
-            <p className="text-orange-400 text-sm">{message}</p>
+            <p className={`text-sm ${message.includes('✅') ? 'text-green-400' : 'text-orange-400'}`}>
+              {message}
+            </p>
           )}
 
           <button
@@ -351,4 +393,3 @@ export default function AddTrail() {
     </div>
   )
 }
-

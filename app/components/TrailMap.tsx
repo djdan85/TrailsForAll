@@ -16,6 +16,7 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl }: Props) 
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const userMarkerRef = useRef<L.Marker | null>(null)
+  const destroyedRef = useRef(false)
   const [locating, setLocating] = useState(false)
 
   const parseGpx = (text: string): [number, number][] => {
@@ -34,6 +35,8 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl }: Props) 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
 
+    destroyedRef.current = false
+
     const map = L.map(containerRef.current, { zoomControl: false }).setView([lat, lng], 14)
     mapRef.current = map
 
@@ -42,8 +45,6 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl }: Props) 
     }).addTo(map)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
-
-    const trailColor = isOfficial ? '#22c55e' : '#111827'
 
     const icon = L.icon({
       iconUrl: isOfficial
@@ -58,38 +59,36 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl }: Props) 
       popupAnchor: [1, -34],
     })
 
-    // Pokud máme GPX, stáhneme a zobrazíme trasu
     if (gpxUrl) {
       fetch(gpxUrl)
         .then(res => res.text())
         .then(text => {
+          // Mapa už byla zničena — nic nedělej
+          if (destroyedRef.current || !mapRef.current) return
+
           const points = parseGpx(text)
           if (points.length > 0) {
-            // Polyline trasy
             const polyline = L.polyline(points, {
               color: isOfficial ? '#f97316' : '#6b7280',
               weight: 4,
               opacity: 0.9
             }).addTo(map)
 
-            // Pin na startu
             L.marker(points[0], { icon })
               .addTo(map)
               .bindPopup(`<strong>${name}</strong><br>Start trasy`)
 
-            // Přizpůsob mapu trase
             map.fitBounds(polyline.getBounds(), { padding: [20, 20] })
           }
         })
         .catch(() => {
-          // Fallback na pin pokud GPX nejde stáhnout
+          if (destroyedRef.current || !mapRef.current) return
           L.marker([lat, lng], { icon })
             .addTo(map)
             .bindPopup(`<strong>${name}</strong>`)
             .openPopup()
         })
     } else {
-      // Jen pin
       L.marker([lat, lng], { icon })
         .addTo(map)
         .bindPopup(`<strong>${name}</strong>`)
@@ -97,6 +96,7 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl }: Props) 
     }
 
     return () => {
+      destroyedRef.current = true
       map.remove()
       mapRef.current = null
     }
@@ -175,4 +175,3 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl }: Props) 
     </div>
   )
 }
-

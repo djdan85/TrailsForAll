@@ -6,7 +6,6 @@ import L from 'leaflet'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
-// SVG ikony pro každý typ trailu
 const createTrailIcon = (type: string, isOfficial: boolean) => {
   const color = isOfficial ? '#22c55e' : '#6b7280'
 
@@ -34,7 +33,6 @@ const createTrailIcon = (type: string, isOfficial: boolean) => {
   }
 
   const svg = icons[type] || icons.singltrek
-
   return L.divIcon({
     className: '',
     html: svg,
@@ -52,6 +50,38 @@ const locationIcon = L.icon({
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
 })
+
+const trailTypeLabel: { [key: string]: string } = {
+  singltrek: '🚵 Singltrek',
+  pumptrack: '🔁 Pumptrack',
+  skatepark: '🛹 Skatepark',
+  bikepark: '🏔️ Bikepark',
+  crosscountry: '🛤️ Cross-country',
+}
+
+const skillLevelLabel: { [key: string]: string } = {
+  zacatecnik: '🟢 Začátečník',
+  pokrocily: '🔵 Pokročilý biker',
+  zkuseny: '🟠 Zkušený biker',
+  zabijak: '⚫ Zabijácký BIKER',
+  easy: '🟢 Lehká',
+  medium: '🟡 Střední',
+  hard: '🔴 Těžká',
+  expert: '⚫ Expert',
+}
+
+const parseGpx = (text: string): [number, number][] => {
+  const parser = new DOMParser()
+  const xml = parser.parseFromString(text, 'application/xml')
+  const trkpts = xml.querySelectorAll('trkpt')
+  const points: [number, number][] = []
+  trkpts.forEach(pt => {
+    const lat = parseFloat(pt.getAttribute('lat') || '')
+    const lon = parseFloat(pt.getAttribute('lon') || '')
+    if (!isNaN(lat) && !isNaN(lon)) points.push([lat, lon])
+  })
+  return points
+}
 
 function ZoomControl() {
   const map = useMap()
@@ -108,39 +138,6 @@ function FlyToLocation({ coords }: { coords: [number, number] | null }) {
   return null
 }
 
-const parseGpx = (text: string): [number, number][] => {
-  const parser = new DOMParser()
-  const xml = parser.parseFromString(text, 'application/xml')
-  const trkpts = xml.querySelectorAll('trkpt')
-  const points: [number, number][] = []
-  trkpts.forEach(pt => {
-    const lat = parseFloat(pt.getAttribute('lat') || '')
-    const lon = parseFloat(pt.getAttribute('lon') || '')
-    if (!isNaN(lat) && !isNaN(lon)) points.push([lat, lon])
-  })
-  return points
-}
-
-const trailTypeLabel: { [key: string]: string } = {
-  singltrek: '🚵 Singltrek',
-  pumptrack: '🔁 Pumptrack',
-  skatepark: '🛹 Skatepark',
-  bikepark: '🏔️ Bikepark',
-  crosscountry: '🛤️ Cross-country',
-}
-
-const skillLevelLabel: { [key: string]: string } = {
-  zacatecnik: '🟢 Začátečník',
-  pokrocily: '🔵 Pokročilý biker',
-  zkuseny: '🟠 Zkušený biker',
-  zabijak: '⚫ Zabijácký BIKER',
-  // zpětná kompatibilita se starými hodnotami
-  easy: '🟢 Lehká',
-  medium: '🟡 Střední',
-  hard: '🔴 Těžká',
-  expert: '⚫ Expert',
-}
-
 export default function Map({ trails }: { trails: any[] }) {
   const router = useRouter()
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
@@ -176,14 +173,9 @@ export default function Map({ trails }: { trails: any[] }) {
         setLocating(false)
       },
       (err) => {
-        console.error('Geolocation error:', err)
-        if (err.code === 1) {
-          alert('Přístup k poloze byl zamítnut. Povol polohu v nastavení prohlížeče.')
-        } else if (err.code === 2) {
-          alert('Polohu se nepodařilo zjistit. Zkus to znovu.')
-        } else {
-          alert('Vypršel čas pro zjištění polohy. Zkus to znovu.')
-        }
+        if (err.code === 1) alert('Přístup k poloze byl zamítnut. Povol polohu v nastavení prohlížeče.')
+        else if (err.code === 2) alert('Polohu se nepodařilo zjistit. Zkus to znovu.')
+        else alert('Vypršel čas pro zjištění polohy. Zkus to znovu.')
         setLocating(false)
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -198,9 +190,7 @@ export default function Map({ trails }: { trails: any[] }) {
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
       >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
         {/* GPX trasy */}
         {trails.map(trail =>
@@ -211,14 +201,14 @@ export default function Map({ trails }: { trails: any[] }) {
               pathOptions={{
                 color: trail.is_official ? '#f97316' : '#6b7280',
                 weight: 3,
-                opacity: 0.8
+                opacity: 0.8,
               }}
             />
           ) : null
         )}
 
-        {/* Markery trailů */}
-        {trails.map((trail) => (
+        {/* Markery */}
+        {trails.map((trail) =>
           trail.lat && trail.lng ? (
             <Marker
               key={trail.id}
@@ -243,7 +233,15 @@ export default function Map({ trails }: { trails: any[] }) {
                   )}
                   <button
                     onClick={() => router.push(`/trail/${trail.id}`)}
-                    style={{ background: '#f97316', color: 'white', padding: '4px 8px', borderRadius: '6px', marginTop: '8px', cursor: 'pointer', border: 'none' }}
+                    style={{
+                      background: '#f97316',
+                      color: 'white',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      marginTop: '8px',
+                      cursor: 'pointer',
+                      border: 'none',
+                    }}
                   >
                     Zobrazit detail
                   </button>
@@ -251,7 +249,7 @@ export default function Map({ trails }: { trails: any[] }) {
               </Popup>
             </Marker>
           ) : null
-        ))}
+        )}
 
         {userLocation && (
           <Marker position={userLocation} icon={locationIcon}>
@@ -260,6 +258,7 @@ export default function Map({ trails }: { trails: any[] }) {
             </Popup>
           </Marker>
         )}
+
         <ZoomControl />
         <FlyToLocation coords={userLocation} />
       </MapContainer>
@@ -315,4 +314,3 @@ export default function Map({ trails }: { trails: any[] }) {
     </div>
   )
 }
-

@@ -8,6 +8,8 @@ const ADMIN_EMAIL = 'dalibor.pasek@gmail.com'
 
 export default function AdminUsers() {
   const router = useRouter()
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentProfile, setCurrentProfile] = useState<any>(null)
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -15,10 +17,24 @@ export default function AdminUsers() {
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser()
-      if (!data.user || data.user.email !== ADMIN_EMAIL) {
-        router.push('/')
-        return
+      if (!data.user) { router.push('/'); return }
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single()
+
+      // Jen admin a superadmin mají přístup
+      if (!profileData || !['admin', 'superadmin'].includes(profileData.role)) {
+        if (data.user.email !== ADMIN_EMAIL) {
+          router.push('/')
+          return
+        }
       }
+
+      setCurrentUser(data.user)
+      setCurrentProfile(profileData)
       fetchUsers()
     }
     getUser()
@@ -69,6 +85,21 @@ export default function AdminUsers() {
     else fetchUsers()
   }
 
+  const isSuperAdmin = currentUser?.email === ADMIN_EMAIL || currentProfile?.role === 'superadmin'
+  const isAdmin = currentProfile?.role === 'admin' || isSuperAdmin
+
+  // Role které může admin přiřazovat
+  const availableRoles = (targetUser: any) => {
+    // Superadmin může přiřadit komukoliv cokoliv
+    if (isSuperAdmin) return ['user', 'member', 'moderator', 'admin']
+    // Admin může měnit jen user/member/moderator — ne adminům a superadminům
+    if (isAdmin) {
+      if (['admin', 'superadmin'].includes(targetUser.role)) return [] // nelze měnit
+      return ['user', 'member', 'moderator']
+    }
+    return []
+  }
+
   const riderLevelLabel: any = {
     beginner: 'Začátečník',
     intermediate: 'Pokročilý',
@@ -88,7 +119,7 @@ export default function AdminUsers() {
   const roleLabel: any = {
     user: 'Uživatel',
     member: 'BIKER',
-    moderator: 'Moderátor',
+    moderator: 'Redaktor',
     editor: 'Editor',
     admin: 'Admin',
     superadmin: 'Superadmin'
@@ -129,8 +160,9 @@ export default function AdminUsers() {
             <h1 className="text-3xl font-bold text-white mb-1">Správa uživatelů</h1>
             <p className="text-gray-400">
               Celkem: {users.length} uživatelů
-              <span className="ml-3 text-blue-400">Moderátorů: {users.filter(u => u.role === 'moderator').length}</span>
+              <span className="ml-3 text-blue-400">Redaktorů: {users.filter(u => u.role === 'moderator').length}</span>
               <span className="ml-3 text-green-400">Členů: {users.filter(u => u.role === 'member').length}</span>
+              <span className="ml-3 text-orange-400">Adminů: {users.filter(u => u.role === 'admin').length}</span>
             </p>
           </div>
           <button
@@ -223,27 +255,36 @@ export default function AdminUsers() {
               )}
 
               {/* Role */}
-              <div className="bg-gray-800 rounded-xl p-4 mb-3">
-                <p className="text-gray-400 text-sm mb-3">Změnit roli uživatele</p>
-                <div className="flex gap-2 flex-wrap">
-                  {['user', 'member', 'moderator', 'admin'].map((role) => (
-                    <button
-                      key={role}
-                      onClick={() => changeRole(u.id, role)}
-                      className={`px-4 py-2 rounded-xl text-sm transition ${
-                        u.role === role
-                          ? `${roleColor[role]} font-bold`
-                          : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                      }`}
-                    >
-                      {roleLabel[role]}
-                    </button>
-                  ))}
+              {availableRoles(u).length > 0 && (
+                <div className="bg-gray-800 rounded-xl p-4 mb-3">
+                  <p className="text-gray-400 text-sm mb-3">Změnit roli uživatele</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {availableRoles(u).map((role) => (
+                      <button
+                        key={role}
+                        onClick={() => changeRole(u.id, role)}
+                        className={`px-4 py-2 rounded-xl text-sm transition ${
+                          u.role === role
+                            ? `${roleColor[role]} font-bold`
+                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                        }`}
+                      >
+                        {roleLabel[role]}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-gray-600 text-xs mt-2">
+                    BIKER vidí neoficiální traily (pokud má povoleno). Redaktor píše články. Admin má plný přístup.
+                  </p>
                 </div>
-                <p className="text-gray-600 text-xs mt-2">
-                  Člen vidí neoficiální traily (pokud má povoleno). Moderátor schvaluje traily a recenze. Admin má plný přístup.
-                </p>
-              </div>
+              )}
+
+              {/* Admin/Superadmin — nelze měnit roli */}
+              {availableRoles(u).length === 0 && ['admin', 'superadmin'].includes(u.role) && !isSuperAdmin && (
+                <div className="bg-gray-800/50 rounded-xl p-4 mb-3">
+                  <p className="text-gray-600 text-sm">🔒 Roli tohoto uživatele nemůžeš měnit.</p>
+                </div>
+              )}
 
               {/* Neoficiální traily */}
               <div className="bg-gray-800 rounded-xl p-4 mb-4">
@@ -278,12 +319,14 @@ export default function AdminUsers() {
                 >
                   {u.is_banned ? 'Odblokovat' : 'Zablokovat'}
                 </button>
-                <button
-                  onClick={() => deleteUser(u.id)}
-                  className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition"
-                >
-                  Smazat uživatele
-                </button>
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => deleteUser(u.id)}
+                    className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition"
+                  >
+                    Smazat uživatele
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -292,4 +335,3 @@ export default function AdminUsers() {
     </div>
   )
 }
-

@@ -31,6 +31,8 @@ export default function TrailDetail() {
   const { id } = useParams()
   const router = useRouter()
   const [trail, setTrail] = useState<any>(null)
+  const [photos, setPhotos] = useState<any[]>([])
+  const [activePhoto, setActivePhoto] = useState(0)
   const [reviews, setReviews] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
@@ -48,6 +50,12 @@ export default function TrailDetail() {
         .eq('id', id)
         .single()
 
+      const { data: photosData } = await supabase
+        .from('trail_photos')
+        .select('*')
+        .eq('trail_id', id)
+        .order('display_order', { ascending: true })
+
       const { data: reviewsData } = await supabase
         .from('reviews')
         .select('*')
@@ -56,7 +64,6 @@ export default function TrailDetail() {
         .order('created_at', { ascending: false })
 
       const { data: userData } = await supabase.auth.getUser()
-
       if (userData.user) {
         const { data: profileData } = await supabase
           .from('profiles')
@@ -67,6 +74,7 @@ export default function TrailDetail() {
       }
 
       setTrail(trailData)
+      setPhotos(photosData || [])
       setReviews(reviewsData || [])
       setUser(userData.user)
       setLoading(false)
@@ -76,22 +84,16 @@ export default function TrailDetail() {
   }, [id])
 
   const handleReview = async () => {
-    if (!user) {
-      router.push('/login')
-      return
-    }
-
+    if (!user) { router.push('/login'); return }
     const { error } = await supabase.from('reviews').insert({
       trail_id: id,
       user_id: user.id,
       rating,
       comment,
-      status: 'pending'
+      status: 'pending',
     })
-
     if (error) setMessage('Chyba: ' + error.message)
-    else setMessage('Recenze odeslána ke schválení!')
-    setComment('')
+    else { setMessage('Recenze odeslána ke schválení! ✅'); setComment('') }
   }
 
   const handleGpxUpload = async (url: string) => {
@@ -99,21 +101,24 @@ export default function TrailDetail() {
       .from('trails')
       .update({ gpx_url: url })
       .eq('id', id)
-
-    if (error) {
-      setGpxMessage('Chyba při ukládání GPX: ' + error.message)
-    } else {
+    if (error) setGpxMessage('Chyba při ukládání GPX: ' + error.message)
+    else {
       setGpxMessage('GPX soubor byl úspěšně nahrán!')
       setTrail((prev: any) => ({ ...prev, gpx_url: url }))
     }
   }
 
-  const canAccessGpx = profile?.role && ['member', 'moderator', 'editor', 'admin', 'superadmin'].includes(profile.role)
+  const canAccessGpx = profile?.role &&
+    ['member', 'moderator', 'editor', 'admin', 'superadmin'].includes(profile.role)
 
   const formatDate = (date: string) => {
     if (!date) return null
     return new Date(date).toLocaleDateString('cs-CZ')
   }
+
+  const mainPhotoUrl = photos.length > 0
+    ? photos[activePhoto]?.url
+    : trail?.photo_url || '/logo.png'
 
   if (loading) return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center">
@@ -139,11 +144,63 @@ export default function TrailDetail() {
         </button>
 
         <div className="bg-gray-900 rounded-2xl overflow-hidden shadow-lg mb-6">
-          <img
-            src={trail.photo_url || '/logo.png'}
-            alt={trail.name}
-            className="w-full h-56 object-cover bg-gray-800"
-          />
+
+          {/* Fotogalerie */}
+          <div className="relative">
+            <img
+              src={mainPhotoUrl}
+              alt={trail.name}
+              className="w-full h-56 object-cover bg-gray-800"
+            />
+            {photos.length > 1 && (
+              <>
+                <button
+                  onClick={() => setActivePhoto(p => Math.max(0, p - 1))}
+                  disabled={activePhoto === 0}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 transition disabled:opacity-30"
+                >
+                  ‹
+                </button>
+                <button
+                  onClick={() => setActivePhoto(p => Math.min(photos.length - 1, p + 1))}
+                  disabled={activePhoto === photos.length - 1}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 transition disabled:opacity-30"
+                >
+                  ›
+                </button>
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                  {photos.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActivePhoto(i)}
+                      className={`w-2 h-2 rounded-full transition ${i === activePhoto ? 'bg-white' : 'bg-white/40'}`}
+                    />
+                  ))}
+                </div>
+                <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                  {activePhoto + 1} / {photos.length}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Miniaturky */}
+          {photos.length > 1 && (
+            <div className="flex gap-2 px-4 pt-3 pb-1 overflow-x-auto">
+              {photos.map((photo, i) => (
+                <button
+                  key={photo.id}
+                  onClick={() => setActivePhoto(i)}
+                  className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition ${
+                    i === activePhoto ? 'border-orange-500' : 'border-transparent'
+                  }`}
+                >
+                  <img src={photo.url} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="p-6">
             <div className="flex items-center gap-3 mb-1 flex-wrap">
               <h1 className="text-3xl font-bold text-white">{trail.name}</h1>
@@ -168,13 +225,15 @@ export default function TrailDetail() {
               <div className="bg-gray-800 rounded-xl p-4">
                 <p className="text-gray-400 text-sm">Pro koho</p>
                 <p className="text-white font-semibold mt-1 text-sm">
-                  {skillLevelLabel[trail.skill_level || trail.difficulty] || '🟢 Začátečník'}
+                  {skillLevelLabel[trail.skill_level] || '🟢 Začátečník'}
                 </p>
               </div>
-              <div className="bg-gray-800 rounded-xl p-4">
-                <p className="text-gray-400 text-sm">Délka</p>
-                <p className="text-white font-semibold mt-1">{trail.length_km} km</p>
-              </div>
+              {trail.length_km && (
+                <div className="bg-gray-800 rounded-xl p-4">
+                  <p className="text-gray-400 text-sm">Délka</p>
+                  <p className="text-white font-semibold mt-1">{trail.length_km} km</p>
+                </div>
+              )}
               {trail.region && (
                 <div className="bg-gray-800 rounded-xl p-4">
                   <p className="text-gray-400 text-sm">Kraj</p>
@@ -236,9 +295,7 @@ export default function TrailDetail() {
                   <div className="flex flex-col gap-3">
                     <p className="text-white font-bold text-sm">GPX soubor není k dispozici. Máš ho? Nahraj ho!</p>
                     <GpxUpload onUpload={(url) => handleGpxUpload(url)} />
-                    {gpxMessage && (
-                      <p className="text-orange-400 text-xs">{gpxMessage}</p>
-                    )}
+                    {gpxMessage && <p className="text-orange-400 text-xs">{gpxMessage}</p>}
                   </div>
                 )}
               </div>
@@ -282,8 +339,14 @@ export default function TrailDetail() {
           </div>
         </div>
 
+        {/* Recenze */}
         <div className="bg-gray-900 rounded-2xl p-6 mb-6">
-          <h2 className="text-xl font-bold text-white mb-4">Recenze</h2>
+          <h2 className="text-xl font-bold text-white mb-4">
+            Recenze
+            {reviews.length > 0 && (
+              <span className="text-gray-400 font-normal text-base ml-2">({reviews.length})</span>
+            )}
+          </h2>
 
           {reviews.length === 0 && (
             <p className="text-gray-400 mb-4">Zatím žádné recenze.</p>
@@ -306,7 +369,6 @@ export default function TrailDetail() {
           </div>
 
           <h3 className="text-white font-semibold mb-3">Přidat recenzi</h3>
-
           <div className="flex flex-col gap-3">
             <div>
               <label className="text-gray-400 text-sm mb-1 block">Hodnocení</label>
@@ -320,7 +382,6 @@ export default function TrailDetail() {
                 ))}
               </select>
             </div>
-
             <div>
               <label className="text-gray-400 text-sm mb-1 block">Komentář</label>
               <textarea
@@ -331,11 +392,11 @@ export default function TrailDetail() {
                 placeholder="Popiš nám svůj zážitek..."
               />
             </div>
-
             {message && (
-              <p className="text-orange-400 text-sm">{message}</p>
+              <p className={`text-sm ${message.includes('✅') ? 'text-green-400' : 'text-orange-400'}`}>
+                {message}
+              </p>
             )}
-
             <button
               onClick={handleReview}
               className="w-full bg-orange-500 text-white py-3 rounded-xl font-semibold hover:bg-orange-600 transition"

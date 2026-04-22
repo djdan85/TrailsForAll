@@ -125,4 +125,3 @@ export default function GpxUpload({ onUpload }: Props) {
     </div>
   )
 }
-

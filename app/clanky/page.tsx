@@ -10,17 +10,14 @@ export default function Clanky() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [profile, setProfile] = useState<any>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: articlesData } = await supabase
-        .from('articles')
-        .select('*')
-        .eq('status', 'published')
-        .order('published_at', { ascending: false })
-
       const { data: userData } = await supabase.auth.getUser()
+
       if (userData.user) {
+        setUserId(userData.user.id)
         const { data: profileData } = await supabase
           .from('profiles')
           .select('role')
@@ -28,6 +25,15 @@ export default function Clanky() {
           .single()
         setProfile(profileData)
       }
+
+      // Admin a superadmin vidí všechny články včetně draft
+      // Moderátor vidí published + své vlastní drafty
+      // Ostatní vidí jen published
+      const { data: articlesData } = await supabase
+        .from('articles')
+        .select('*')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
 
       setArticles(articlesData || [])
       setLoading(false)
@@ -58,7 +64,19 @@ export default function Clanky() {
     return new Date(date).toLocaleDateString('cs-CZ')
   }
 
-  const canWrite = profile?.role && ['editor', 'admin', 'superadmin'].includes(profile.role)
+  // Kdo může psát články
+  const canWrite = profile?.role && ['moderator', 'admin', 'superadmin'].includes(profile.role)
+
+  // Kdo může upravovat jakýkoliv článek
+  const canEditAll = profile?.role && ['admin', 'superadmin'].includes(profile.role)
+
+  // Může upravit konkrétní článek
+  const canEditArticle = (article: any) => {
+    if (canEditAll) return true
+    // Moderátor/redaktor může jen své vlastní
+    if (profile?.role === 'moderator' && article.created_by === userId) return true
+    return false
+  }
 
   if (loading) return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center">
@@ -115,19 +133,19 @@ export default function Clanky() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filtered.map((article) => (
-            <div
-              key={article.id}
-              onClick={() => router.push(`/clanky/${article.slug}`)}
-              className="bg-gray-900 rounded-2xl overflow-hidden cursor-pointer hover:bg-gray-800 transition"
-            >
+            <div key={article.id} className="bg-gray-900 rounded-2xl overflow-hidden">
               {article.cover_url && (
                 <img
                   src={article.cover_url}
                   alt={article.title}
-                  className="w-full h-48 object-cover"
+                  className="w-full h-48 object-cover cursor-pointer"
+                  onClick={() => router.push(`/clanky/${article.slug}`)}
                 />
               )}
-              <div className="p-6">
+              <div
+                className="p-6 cursor-pointer"
+                onClick={() => router.push(`/clanky/${article.slug}`)}
+              >
                 <div className="flex items-center gap-2 mb-3">
                   <span className={`text-xs px-2 py-1 rounded-full font-semibold ${categoryColor[article.category]}`}>
                     {categoryLabel[article.category]}
@@ -139,6 +157,18 @@ export default function Clanky() {
                   <p className="text-gray-400 text-sm line-clamp-2">{article.excerpt}</p>
                 )}
               </div>
+
+              {/* Tlačítko upravit — jen pro oprávněné */}
+              {canEditArticle(article) && (
+                <div className="px-6 pb-5">
+                  <button
+                    onClick={() => router.push(`/clanky/${article.slug}/upravit`)}
+                    className="w-full bg-gray-800 text-gray-300 py-2 rounded-xl text-sm hover:bg-gray-700 transition font-medium"
+                  >
+                    ✏️ Upravit článek
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -147,4 +177,3 @@ export default function Clanky() {
     </div>
   )
 }
-
