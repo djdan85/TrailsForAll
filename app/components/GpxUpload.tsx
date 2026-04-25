@@ -3,35 +3,18 @@
 import { useState } from 'react'
 
 interface Props {
-  onUpload: (url: string, points: [number, number][], color?: string) => void
+  onUpload: (url: string, points: [number, number][]) => void
 }
-
-const colorOptions = [
-  { label: 'Zelená', value: '#22c55e', bg: 'bg-green-500' },
-  { label: 'Modrá', value: '#3b82f6', bg: 'bg-blue-500' },
-  { label: 'Červená', value: '#ef4444', bg: 'bg-red-500' },
-  { label: 'Černá', value: '#111827', bg: 'bg-gray-900' },
-  { label: 'Žlutá', value: '#eab308', bg: 'bg-yellow-500' },
-  { label: 'Oranžová', value: '#f97316', bg: 'bg-orange-500' },
-  { label: 'Bílá', value: '#ffffff', bg: 'bg-white' },
-]
 
 export default function GpxUpload({ onUpload }: Props) {
   const [uploading, setUploading] = useState(false)
   const [fileName, setFileName] = useState<string | null>(null)
-  const [selectedColor, setSelectedColor] = useState('#22c55e')
-  const [uploaded, setUploaded] = useState(false)
-  const [lastUrl, setLastUrl] = useState('')
-  const [lastPoints, setLastPoints] = useState<[number, number][]>([])
 
   const parseGpx = (text: string): [number, number][] => {
     const parser = new DOMParser()
     const xml = parser.parseFromString(text, 'application/xml')
     const points: [number, number][] = []
-
-    // Zkusíme všechny tři typy bodů
     const selectors = ['trkpt', 'rtept', 'wpt']
-
     for (const selector of selectors) {
       const nodes = xml.querySelectorAll(selector)
       if (nodes.length > 0) {
@@ -40,10 +23,9 @@ export default function GpxUpload({ onUpload }: Props) {
           const lon = parseFloat(pt.getAttribute('lon') || '')
           if (!isNaN(lat) && !isNaN(lon)) points.push([lat, lon])
         })
-        if (points.length > 0) break // Jakmile najdeme body, skončíme
+        if (points.length > 0) break
       }
     }
-
     return points
   }
 
@@ -90,23 +72,13 @@ export default function GpxUpload({ onUpload }: Props) {
       }
 
       setFileName(file.name)
-      setLastUrl(data.url)
-      setLastPoints(points)
-      setUploaded(true)
-      onUpload(data.url, points, selectedColor)
+      onUpload(data.url, points)
     } catch (err) {
       alert('Chyba při zpracování GPX souboru.')
       console.error(err)
     }
 
     setUploading(false)
-  }
-
-  const handleColorChange = (color: string) => {
-    setSelectedColor(color)
-    if (uploaded && lastUrl) {
-      onUpload(lastUrl, lastPoints, color)
-    }
   }
 
   return (
@@ -122,10 +94,7 @@ export default function GpxUpload({ onUpload }: Props) {
           <button
             onClick={() => {
               setFileName(null)
-              setUploaded(false)
-              setLastUrl('')
-              setLastPoints([])
-              onUpload('', [], selectedColor)
+              onUpload('', [])
             }}
             className="text-red-400 text-xs hover:text-red-300 transition"
           >
@@ -148,29 +117,6 @@ export default function GpxUpload({ onUpload }: Props) {
         />
         {uploading ? 'Nahrávám GPX...' : fileName ? 'Změnit GPX soubor' : 'Klikni nebo přetáhni .gpx soubor'}
       </label>
-
-      {/* Výběr barvy trasy */}
-      <div>
-        <p className="text-gray-400 text-sm mb-2">Barva trasy na mapě</p>
-        <div className="flex gap-2 flex-wrap">
-          {colorOptions.map((color) => (
-            <button
-              key={color.value}
-              type="button"
-              onClick={() => handleColorChange(color.value)}
-              title={color.label}
-              className={`w-8 h-8 rounded-full border-4 transition ${color.bg} ${
-                selectedColor === color.value
-                  ? 'border-orange-500 scale-110'
-                  : 'border-transparent hover:border-gray-400'
-              }`}
-            />
-          ))}
-        </div>
-        <p className="text-gray-600 text-xs mt-1">
-          Vybraná barva: {colorOptions.find(c => c.value === selectedColor)?.label}
-        </p>
-      </div>
 
       <p className="text-gray-600 text-xs">Max. 5 MB. Trasa se zobrazí na mapě.</p>
       <p className="text-gray-600 text-xs">

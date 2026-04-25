@@ -10,6 +10,16 @@ import dynamic from 'next/dynamic'
 const RouteMap = dynamic(() => import('../components/RouteMap'), { ssr: false })
 const TrailMap = dynamic(() => import('../components/TrailMap'), { ssr: false })
 
+const colorOptions = [
+  { label: 'Zelená', value: '#22c55e' },
+  { label: 'Modrá', value: '#3b82f6' },
+  { label: 'Červená', value: '#ef4444' },
+  { label: 'Černá', value: '#111827' },
+  { label: 'Žlutá', value: '#eab308' },
+  { label: 'Oranžová', value: '#f97316' },
+  { label: 'Bílá', value: '#ffffff' },
+]
+
 const trailTypes = [
   { value: 'singltrek', label: '🚵 Singltrek / Trail', desc: 'Úzká stezka v terénu, většinou v lese. Technické sekce, kořeny, kameny. Klasika pro MTB.' },
   { value: 'pumptrack', label: '🔁 Pumptrack', desc: 'Okruh s vlnami a zatáčkami. Jedeš bez šlapání — jen pumpuješ tělem. Baví všechny věkové kategorie.' },
@@ -62,10 +72,9 @@ export default function AddTrail() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const handleGpxUpload = (url: string, points: [number, number][], color?: string) => {
+  const handleGpxUpload = (url: string, points: [number, number][]) => {
     setGpxUrl(url)
     setGpxPoints(points)
-    if (color) setGpxColor(color)
     if (points.length > 0) {
       setRoutePoints([points[0]])
     } else {
@@ -276,7 +285,36 @@ export default function AddTrail() {
           {/* GPX upload */}
           <GpxUpload onUpload={handleGpxUpload} />
 
-          {/* Preview mapy — po nahrání GPX zobrazí trasu, jinak picker */}
+          {/* Výběr barvy — zobrazí se po nahrání GPX */}
+          {gpxUrl && (
+            <div>
+              <label className="text-gray-400 text-sm mb-2 block">Barva trasy na mapě</label>
+              <div className="flex gap-2 flex-wrap">
+                {colorOptions.map((color) => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    onClick={() => {
+                      setGpxColor(color.value)
+                      setPreviewKey(k => k + 1)
+                    }}
+                    title={color.label}
+                    style={{ backgroundColor: color.value }}
+                    className={`w-9 h-9 rounded-full border-4 transition ${
+                      gpxColor === color.value
+                        ? 'border-orange-500 scale-110'
+                        : 'border-gray-600 hover:border-gray-400'
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-gray-600 text-xs mt-1">
+                Vybraná: {colorOptions.find(c => c.value === gpxColor)?.label}
+              </p>
+            </div>
+          )}
+
+          {/* Preview mapy */}
           <div>
             <label className="text-gray-400 text-sm mb-1 block">
               Poloha
@@ -286,7 +324,6 @@ export default function AddTrail() {
             </label>
 
             {gpxUrl && gpxPoints.length > 0 ? (
-              // Po nahrání GPX — zobraz celou trasu
               <div style={{ height: '380px', borderRadius: '12px', overflow: 'hidden' }}>
                 <TrailMap
                   key={previewKey}
@@ -299,7 +336,6 @@ export default function AddTrail() {
                 />
               </div>
             ) : (
-              // Bez GPX — klasický picker
               <RouteMap
                 points={routePoints}
                 onChange={(pts, reg) => {
@@ -316,7 +352,6 @@ export default function AddTrail() {
               </p>
             )}
 
-            {/* Tlačítko pro reset GPX a návrat k pickeru */}
             {gpxUrl && (
               <button
                 type="button"
