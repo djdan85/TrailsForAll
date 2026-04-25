@@ -192,16 +192,16 @@ export default function Map({ trails }: { trails: any[] }) {
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        {/* GPX trasy */}
+        {/* GPX trasy — barva podle gpx_color nebo fallback */}
         {trails.map(trail =>
           gpxRoutes[trail.id] ? (
             <Polyline
               key={`gpx-${trail.id}`}
               positions={gpxRoutes[trail.id]}
               pathOptions={{
-                color: trail.is_official ? '#f97316' : '#6b7280',
+                color: trail.gpx_color || (trail.is_official ? '#f97316' : '#6b7280'),
                 weight: 3,
-                opacity: 0.8,
+                opacity: 0.9,
               }}
             />
           ) : null
@@ -229,7 +229,9 @@ export default function Map({ trails }: { trails: any[] }) {
                     <p style={{ fontSize: '11px', color: '#aaa', marginTop: '2px' }}>☠️ Neoficiální trail</p>
                   )}
                   {gpxRoutes[trail.id] && (
-                    <p style={{ fontSize: '11px', color: '#22c55e', marginTop: '2px' }}>📍 GPX trasa načtena</p>
+                    <p style={{ fontSize: '11px', color: trail.gpx_color || '#22c55e', marginTop: '2px' }}>
+                      ● GPX trasa načtena
+                    </p>
                   )}
                   <button
                     onClick={() => router.push(`/trail/${trail.id}`)}
@@ -284,6 +286,16 @@ export default function Map({ trails }: { trails: any[] }) {
         <p>🛹 Skatepark</p>
         <p>🏔️ Bikepark</p>
         <p>🛤️ Cross-country</p>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', marginTop: '4px', paddingTop: '4px' }}>
+          <p style={{ fontWeight: 'bold', marginBottom: '2px', color: '#f97316' }}>Barvy tras</p>
+          <p><span style={{ color: '#22c55e' }}>━</span> Zelená</p>
+          <p><span style={{ color: '#3b82f6' }}>━</span> Modrá</p>
+          <p><span style={{ color: '#ef4444' }}>━</span> Červená</p>
+          <p><span style={{ color: '#9ca3af' }}>━</span> Černá</p>
+          <p><span style={{ color: '#eab308' }}>━</span> Žlutá</p>
+          <p><span style={{ color: '#f97316' }}>━</span> Oranžová</p>
+          <p><span style={{ color: '#ffffff' }}>━</span> Bílá</p>
+        </div>
       </div>
 
       <button

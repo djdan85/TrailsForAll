@@ -67,6 +67,7 @@ export default function AddTrail() {
   const [message, setMessage] = useState('')
   const [routePoints, setRoutePoints] = useState<[number, number][]>([])
   const [gpxUrl, setGpxUrl] = useState('')
+  const [gpxColor, setGpxColor] = useState('#22c55e')
   const [region, setRegion] = useState('')
   const [photos, setPhotos] = useState<UploadedPhoto[]>([])
   const [form, setForm] = useState({
@@ -94,8 +95,9 @@ export default function AddTrail() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const handleGpxUpload = (url: string, points: [number, number][]) => {
+  const handleGpxUpload = (url: string, points: [number, number][], color?: string) => {
     setGpxUrl(url)
+    if (color) setGpxColor(color)
     if (points.length > 0) {
       setRoutePoints([points[0]])
     } else {
@@ -127,6 +129,7 @@ export default function AddTrail() {
         lat: startPoint[0],
         lng: startPoint[1],
         gpx_url: gpxUrl || null,
+        gpx_color: gpxColor,
         photo_url: primaryPhoto?.url || null,
         maps_url: form.maps_url || null,
         website_url: form.website_url || null,
