@@ -69,13 +69,13 @@ const categoryColor: { [key: string]: string } = {
 }
 
 const colorOptions = [
-  { label: 'Zelená', value: '#22c55e', bg: 'bg-green-500' },
-  { label: 'Modrá', value: '#3b82f6', bg: 'bg-blue-500' },
-  { label: 'Červená', value: '#ef4444', bg: 'bg-red-500' },
-  { label: 'Černá', value: '#111827', bg: 'bg-gray-900' },
-  { label: 'Žlutá', value: '#eab308', bg: 'bg-yellow-500' },
-  { label: 'Oranžová', value: '#f97316', bg: 'bg-orange-500' },
-  { label: 'Bílá', value: '#ffffff', bg: 'bg-white' },
+  { label: 'Zelená', value: '#22c55e' },
+  { label: 'Modrá', value: '#3b82f6' },
+  { label: 'Červená', value: '#ef4444' },
+  { label: 'Černá', value: '#111827' },
+  { label: 'Žlutá', value: '#eab308' },
+  { label: 'Oranžová', value: '#f97316' },
+  { label: 'Bílá', value: '#ffffff' },
 ]
 
 export default function Admin() {
@@ -501,7 +501,7 @@ export default function Admin() {
                         </div>
                       </div>
 
-                      {/* Barva GPX trasy */}
+                      {/* Barva GPX trasy — inline style místo Tailwind */}
                       <div>
                         <label className="text-gray-400 text-xs mb-2 block">Barva GPX trasy na mapě</label>
                         <div className="flex gap-2 flex-wrap">
@@ -514,11 +514,19 @@ export default function Admin() {
                                 setGpxPreviewKey(k => k + 1)
                               }}
                               title={color.label}
-                              className={`w-8 h-8 rounded-full border-4 transition ${color.bg} ${
-                                (editingTrail.gpx_color || '#22c55e') === color.value
-                                  ? 'border-orange-500 scale-110'
-                                  : 'border-transparent hover:border-gray-400'
-                              }`}
+                              style={{
+                                backgroundColor: color.value,
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                border: (editingTrail.gpx_color || '#22c55e') === color.value
+                                  ? '4px solid #f97316'
+                                  : '4px solid transparent',
+                                outline: '2px solid #374151',
+                                cursor: 'pointer',
+                                transform: (editingTrail.gpx_color || '#22c55e') === color.value ? 'scale(1.15)' : 'scale(1)',
+                                transition: 'all 0.15s',
+                              }}
                             />
                           ))}
                         </div>
@@ -527,7 +535,7 @@ export default function Admin() {
                         </p>
                       </div>
 
-                      {/* Poloha + GPX preview */}
+                      {/* Poloha */}
                       <div>
                         <label className="text-gray-400 text-xs mb-1 block">Poloha startu — klikni na mapu</label>
                         <RouteMap
@@ -539,7 +547,7 @@ export default function Admin() {
                         )}
                       </div>
 
-                      {/* GPX preview s barvou */}
+                      {/* GPX preview */}
                       {editingTrail.gpx_url && (
                         <div>
                           <label className="text-gray-400 text-xs mb-2 block">Preview GPX trasy</label>
@@ -582,7 +590,7 @@ export default function Admin() {
                             )}
                             {trail.gpx_url && trail.gpx_color && (
                               <span className="flex items-center gap-1 text-xs text-gray-400">
-                                <span style={{ backgroundColor: trail.gpx_color }} className="w-3 h-3 rounded-full inline-block" />
+                                <span style={{ backgroundColor: trail.gpx_color, width: '12px', height: '12px', borderRadius: '50%', display: 'inline-block' }} />
                                 GPX
                               </span>
                             )}
