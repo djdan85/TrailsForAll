@@ -10,6 +10,8 @@ import dynamic from 'next/dynamic'
 const RouteMap = dynamic(() => import('../components/RouteMap'), { ssr: false })
 const TrailMap = dynamic(() => import('../components/TrailMap'), { ssr: false })
 
+const DEFAULT_TRAIL_COLOR = '#f97316'
+
 const colorOptions = [
   { label: 'Zelená', value: '#22c55e' },
   { label: 'Modrá', value: '#3b82f6' },
@@ -42,7 +44,7 @@ export default function AddTrail() {
   const [message, setMessage] = useState('')
   const [routePoints, setRoutePoints] = useState<[number, number][]>([])
   const [gpxUrl, setGpxUrl] = useState('')
-  const [gpxColor, setGpxColor] = useState('#22c55e')
+  const [gpxColor, setGpxColor] = useState(DEFAULT_TRAIL_COLOR)
   const [gpxPoints, setGpxPoints] = useState<[number, number][]>([])
   const [region, setRegion] = useState('')
   const [photos, setPhotos] = useState<UploadedPhoto[]>([])
@@ -60,6 +62,8 @@ export default function AddTrail() {
     is_official: true,
   })
 
+  const isBikepark = form.trail_type === 'bikepark'
+
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser()
@@ -72,6 +76,15 @@ export default function AddTrail() {
 
   const handleChange = (e: any) => {
     setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  const handleTrailTypeChange = (trailType: string) => {
+    setForm((prev) => ({ ...prev, trail_type: trailType }))
+
+    if (trailType !== 'bikepark') {
+      setGpxColor(DEFAULT_TRAIL_COLOR)
+      setPreviewKey((k) => k + 1)
+    }
   }
 
   const handleGpxUpload = (url: string, points: [number, number][]) => {
@@ -105,6 +118,7 @@ export default function AddTrail() {
 
     const startPoint = routePoints[0]
     const primaryPhoto = photos.find((p) => p.is_primary) || photos[0] || null
+    const finalGpxColor = isBikepark ? gpxColor : DEFAULT_TRAIL_COLOR
 
     const { data: trailData, error: trailError } = await supabase
       .from('trails')
@@ -118,7 +132,7 @@ export default function AddTrail() {
         lat: startPoint[0],
         lng: startPoint[1],
         gpx_url: gpxUrl || null,
-        gpx_color: gpxColor,
+        gpx_color: finalGpxColor,
         photo_url: primaryPhoto?.url || null,
         maps_url: form.maps_url || null,
         website_url: form.website_url || null,
@@ -198,7 +212,7 @@ export default function AddTrail() {
                 <button
                   key={type.value}
                   type="button"
-                  onClick={() => setForm((prev) => ({ ...prev, trail_type: type.value }))}
+                  onClick={() => handleTrailTypeChange(type.value)}
                   className={`w-full text-left px-4 py-3 rounded-xl transition ${
                     form.trail_type === type.value
                       ? 'bg-orange-500 text-white'
@@ -297,35 +311,50 @@ export default function AddTrail() {
 
           <GpxUpload onUpload={handleGpxUpload} />
 
-          <div>
-            <label className="text-gray-400 text-sm mb-2 block">
-              Barva trasy na mapě
-            </label>
+          {isBikepark ? (
+            <div>
+              <label className="text-gray-400 text-sm mb-2 block">
+                Barva trasy v bikeparku
+              </label>
 
-            <div className="flex gap-2 flex-wrap">
-              {colorOptions.map((color) => (
-                <button
-                  key={color.value}
-                  type="button"
-                  onClick={() => {
-                    setGpxColor(color.value)
-                    setPreviewKey((k) => k + 1)
-                  }}
-                  title={color.label}
-                  style={{ backgroundColor: color.value }}
-                  className={`w-10 h-10 rounded-full border-4 transition ${
-                    gpxColor === color.value
-                      ? 'border-orange-500 scale-110'
-                      : 'border-gray-600 hover:border-gray-400'
-                  }`}
-                />
-              ))}
+              <div className="flex gap-2 flex-wrap">
+                {colorOptions.map((color) => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    onClick={() => {
+                      setGpxColor(color.value)
+                      setPreviewKey((k) => k + 1)
+                    }}
+                    title={color.label}
+                    style={{ backgroundColor: color.value }}
+                    className={`w-10 h-10 rounded-full border-4 transition ${
+                      gpxColor === color.value
+                        ? 'border-orange-500 scale-110'
+                        : 'border-gray-600 hover:border-gray-400'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              <p className="text-gray-600 text-xs mt-1">
+                Vybraná: {colorOptions.find((c) => c.value === gpxColor)?.label}
+              </p>
+
+              <p className="text-gray-600 text-xs mt-1">
+                Barvy používejte hlavně u bikeparků, kde bývají jednotlivé trasy značené podle obtížnosti nebo systému areálu.
+              </p>
             </div>
-
-            <p className="text-gray-600 text-xs mt-1">
-              Vybraná: {colorOptions.find((c) => c.value === gpxColor)?.label}
-            </p>
-          </div>
+          ) : (
+            <div className="bg-gray-800 rounded-xl px-4 py-3">
+              <p className="text-gray-400 text-sm">
+                Barva trasy
+              </p>
+              <p className="text-gray-600 text-xs mt-1">
+                U tohoto typu místa se trasa zobrazí automaticky oranžově. Výběr barvy je dostupný jen pro bikepark.
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="text-gray-400 text-sm mb-1 block">
@@ -344,7 +373,7 @@ export default function AddTrail() {
                   name={form.name || 'Nový trail'}
                   isOfficial={form.is_official}
                   gpxUrl={gpxUrl}
-                  gpxColor={gpxColor}
+                  gpxColor={isBikepark ? gpxColor : DEFAULT_TRAIL_COLOR}
                 />
               </div>
             ) : (
