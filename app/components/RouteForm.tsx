@@ -155,10 +155,22 @@ export default function RouteForm({ routes, onChange }: RouteFormProps) {
 
               <div>
                 <label className="block text-sm text-gray-400 mb-1">GPX soubor</label>
-                <GpxUpload
-                  value={route.gpx_url}
-                  onChange={(url) => updateRoute(index, 'gpx_url', url)}
-                />
+                {route.gpx_url ? (
+                  <div className="flex items-center justify-between bg-gray-700 rounded-xl px-4 py-3">
+                    <p className="text-green-400 text-sm">✓ GPX nahráno</p>
+                    <button
+                      type="button"
+                      onClick={() => updateRoute(index, 'gpx_url', '')}
+                      className="text-red-400 text-xs hover:text-red-300 transition"
+                    >
+                      Odstranit
+                    </button>
+                  </div>
+                ) : (
+                  <GpxUpload
+                    onUpload={(url) => updateRoute(index, 'gpx_url', url)}
+                  />
+                )}
               </div>
             </div>
           )}
