@@ -13,7 +13,14 @@ interface Props {
   gpxColor?: string
 }
 
-export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl, gpxColor }: Props) {
+export default function TrailMap({
+  lat,
+  lng,
+  name,
+  isOfficial,
+  gpxUrl,
+  gpxColor,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const userMarkerRef = useRef<L.Marker | null>(null)
@@ -23,26 +30,45 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl, gpxColor 
   const parseGpx = (text: string): [number, number][] => {
     const parser = new DOMParser()
     const xml = parser.parseFromString(text, 'application/xml')
-    const trkpts = xml.querySelectorAll('trkpt')
     const points: [number, number][] = []
-    trkpts.forEach(pt => {
-      const lat = parseFloat(pt.getAttribute('lat') || '')
-      const lon = parseFloat(pt.getAttribute('lon') || '')
-      if (!isNaN(lat) && !isNaN(lon)) points.push([lat, lon])
-    })
+
+    const selectors = ['trkpt', 'rtept', 'wpt']
+
+    for (const selector of selectors) {
+      const nodes = xml.querySelectorAll(selector)
+
+      if (nodes.length > 0) {
+        nodes.forEach((pt) => {
+          const pointLat = parseFloat(pt.getAttribute('lat') || '')
+          const pointLon = parseFloat(pt.getAttribute('lon') || '')
+
+          if (!isNaN(pointLat) && !isNaN(pointLon)) {
+            points.push([pointLat, pointLon])
+          }
+        })
+
+        if (points.length > 0) break
+      }
+    }
+
     return points
   }
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
+    if (!containerRef.current) return
 
     destroyedRef.current = false
+
+    if (mapRef.current) {
+      mapRef.current.remove()
+      mapRef.current = null
+    }
 
     const map = L.map(containerRef.current, { zoomControl: false }).setView([lat, lng], 14)
     mapRef.current = map
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
+      attribution: '© OpenStreetMap',
     }).addTo(map)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
@@ -60,30 +86,38 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl, gpxColor 
       popupAnchor: [1, -34],
     })
 
-    const trailColor = gpxColor || (isOfficial ? '#f97316' : '#6b7280')
+    const trailColor = gpxColor || '#22c55e'
 
     if (gpxUrl) {
       fetch(gpxUrl)
-        .then(res => res.text())
-        .then(text => {
+        .then((res) => res.text())
+        .then((text) => {
           if (destroyedRef.current || !mapRef.current) return
+
           const points = parseGpx(text)
+
           if (points.length > 0) {
             const polyline = L.polyline(points, {
               color: trailColor,
-              weight: 4,
-              opacity: 0.9
+              weight: 5,
+              opacity: 0.95,
             }).addTo(map)
 
             L.marker(points[0], { icon })
               .addTo(map)
               .bindPopup(`<strong>${name}</strong><br>Start trasy`)
 
-            map.fitBounds(polyline.getBounds(), { padding: [20, 20] })
+            map.fitBounds(polyline.getBounds(), { padding: [24, 24] })
+          } else {
+            L.marker([lat, lng], { icon })
+              .addTo(map)
+              .bindPopup(`<strong>${name}</strong>`)
+              .openPopup()
           }
         })
         .catch(() => {
           if (destroyedRef.current || !mapRef.current) return
+
           L.marker([lat, lng], { icon })
             .addTo(map)
             .bindPopup(`<strong>${name}</strong>`)
@@ -96,10 +130,17 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl, gpxColor 
         .openPopup()
     }
 
+    setTimeout(() => {
+      map.invalidateSize()
+    }, 200)
+
     return () => {
       destroyedRef.current = true
-      map.remove()
-      mapRef.current = null
+
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+      }
     }
   }, [lat, lng, name, isOfficial, gpxUrl, gpxColor])
 
@@ -108,13 +149,19 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl, gpxColor 
       alert('Tvůj prohlížeč nepodporuje geolokaci.')
       return
     }
+
     setLocating(true)
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const userLat = pos.coords.latitude
         const userLng = pos.coords.longitude
         const map = mapRef.current
-        if (!map) return
+
+        if (!map) {
+          setLocating(false)
+          return
+        }
 
         if (userMarkerRef.current) {
           userMarkerRef.current.remove()
@@ -122,7 +169,8 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl, gpxColor 
 
         const userIcon = L.icon({
           iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-          iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+          iconRetinaUrl:
+            'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
           shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
           iconSize: [25, 41],
           iconAnchor: [12, 41],
@@ -134,25 +182,42 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl, gpxColor 
           .bindPopup('Tvoje poloha')
           .openPopup()
 
-        map.flyTo([userLat, userLng], 14, { animate: true, duration: 1.5 })
+        map.flyTo([userLat, userLng], 14, {
+          animate: true,
+          duration: 1.5,
+        })
+
         setLocating(false)
       },
       (err) => {
-        if (err.code === 1) alert('Přístup k poloze byl zamítnut.')
-        else alert('Polohu se nepodařilo zjistit.')
+        if (err.code === 1) {
+          alert('Přístup k poloze byl zamítnut.')
+        } else {
+          alert('Polohu se nepodařilo zjistit.')
+        }
+
         setLocating(false)
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
     )
   }
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
       <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
+
       <button
+        type="button"
         onClick={handleLocate}
         disabled={locating}
-        onTouchEnd={(e) => { e.preventDefault(); handleLocate() }}
+        onTouchEnd={(e) => {
+          e.preventDefault()
+          handleLocate()
+        }}
         style={{
           position: 'absolute',
           bottom: '12px',
