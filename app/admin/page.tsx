@@ -7,6 +7,7 @@ import ImageUpload from '../components/ImageUpload'
 import dynamic from 'next/dynamic'
 
 const RouteMap = dynamic(() => import('../components/RouteMap'), { ssr: false })
+const TrailMap = dynamic(() => import('../components/TrailMap'), { ssr: false })
 
 const ADMIN_EMAIL = 'dalibor.pasek@gmail.com'
 
@@ -92,6 +93,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true)
   const [editingTrail, setEditingTrail] = useState<any>(null)
   const [editRoutePoints, setEditRoutePoints] = useState<[number, number][]>([])
+  const [gpxPreviewKey, setGpxPreviewKey] = useState(0)
 
   useEffect(() => {
     const getUser = async () => {
@@ -328,9 +330,7 @@ export default function Admin() {
           <div className="flex flex-col gap-4">
             {articles.length === 0 && <p className="text-gray-400">Žádné články.</p>}
             {articles.map((article) => (
-              <div key={article.id} className={`rounded-2xl p-5 ${
-                article.status === 'deleted' ? 'bg-red-950 border border-red-900' : 'bg-gray-900'
-              }`}>
+              <div key={article.id} className={`rounded-2xl p-5 ${article.status === 'deleted' ? 'bg-red-950 border border-red-900' : 'bg-gray-900'}`}>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -350,9 +350,7 @@ export default function Admin() {
                       </span>
                     </div>
                     <h2 className="text-white font-bold text-lg">{article.title}</h2>
-                    {article.excerpt && (
-                      <p className="text-gray-400 text-sm mt-1 line-clamp-2">{article.excerpt}</p>
-                    )}
+                    {article.excerpt && <p className="text-gray-400 text-sm mt-1 line-clamp-2">{article.excerpt}</p>}
                   </div>
                   {article.cover_url && (
                     <img src={article.cover_url} alt={article.title} className="w-20 h-16 object-cover rounded-xl ml-4 flex-shrink-0" />
@@ -511,7 +509,10 @@ export default function Admin() {
                             <button
                               key={color.value}
                               type="button"
-                              onClick={() => setEditingTrail({...editingTrail, gpx_color: color.value})}
+                              onClick={() => {
+                                setEditingTrail({...editingTrail, gpx_color: color.value})
+                                setGpxPreviewKey(k => k + 1)
+                              }}
                               title={color.label}
                               className={`w-8 h-8 rounded-full border-4 transition ${color.bg} ${
                                 (editingTrail.gpx_color || '#22c55e') === color.value
@@ -526,6 +527,7 @@ export default function Admin() {
                         </p>
                       </div>
 
+                      {/* Poloha + GPX preview */}
                       <div>
                         <label className="text-gray-400 text-xs mb-1 block">Poloha startu — klikni na mapu</label>
                         <RouteMap
@@ -536,6 +538,24 @@ export default function Admin() {
                           <p className="text-gray-600 text-xs mt-1">📍 {editRoutePoints[0][0].toFixed(5)}, {editRoutePoints[0][1].toFixed(5)}</p>
                         )}
                       </div>
+
+                      {/* GPX preview s barvou */}
+                      {editingTrail.gpx_url && (
+                        <div>
+                          <label className="text-gray-400 text-xs mb-2 block">Preview GPX trasy</label>
+                          <div style={{ height: '220px', borderRadius: '12px', overflow: 'hidden' }}>
+                            <TrailMap
+                              key={gpxPreviewKey}
+                              lat={parseFloat(editingTrail.lat)}
+                              lng={parseFloat(editingTrail.lng)}
+                              name={editingTrail.name}
+                              isOfficial={editingTrail.is_official}
+                              gpxUrl={editingTrail.gpx_url}
+                              gpxColor={editingTrail.gpx_color || '#22c55e'}
+                            />
+                          </div>
+                        </div>
+                      )}
 
                       <ImageUpload label="Fotografie" onUpload={url => setEditingTrail({...editingTrail, photo_url: url})} />
 
@@ -608,7 +628,7 @@ export default function Admin() {
                           <>
                             {trail.status !== 'approved' && <button onClick={() => updateTrailStatus(trail.id, 'approved')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">✅ Schválit</button>}
                             {trail.status !== 'rejected' && <button onClick={() => updateTrailStatus(trail.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">❌ Zamítnout</button>}
-                            <button onClick={() => { setEditingTrail({...trail}); setEditRoutePoints(trail.lat && trail.lng ? [[parseFloat(trail.lat), parseFloat(trail.lng)]] : []) }} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition">✏️ Upravit</button>
+                            <button onClick={() => { setEditingTrail({...trail}); setEditRoutePoints(trail.lat && trail.lng ? [[parseFloat(trail.lat), parseFloat(trail.lng)]] : []); setGpxPreviewKey(k => k + 1) }} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition">✏️ Upravit</button>
                             <button onClick={() => updateTrailStatus(trail.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">🗑 Do koše</button>
                           </>
                         )}

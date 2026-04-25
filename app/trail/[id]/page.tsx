@@ -28,7 +28,8 @@ const skillLevelLabel: { [key: string]: string } = {
 }
 
 export default function TrailDetail() {
-  const { id } = useParams()
+  const params = useParams()
+  const id = params?.id as string
   const router = useRouter()
   const [trail, setTrail] = useState<any>(null)
   const [photos, setPhotos] = useState<any[]>([])
@@ -275,6 +276,7 @@ export default function TrailDetail() {
                     name={trail.name}
                     isOfficial={trail.is_official}
                     gpxUrl={trail.gpx_url || undefined}
+                    gpxColor={trail.gpx_color || undefined}
                   />
                 </div>
               </div>

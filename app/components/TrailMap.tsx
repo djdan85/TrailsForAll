@@ -10,9 +10,10 @@ interface Props {
   name: string
   isOfficial: boolean
   gpxUrl?: string
+  gpxColor?: string
 }
 
-export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl }: Props) {
+export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl, gpxColor }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const userMarkerRef = useRef<L.Marker | null>(null)
@@ -59,17 +60,17 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl }: Props) 
       popupAnchor: [1, -34],
     })
 
+    const trailColor = gpxColor || (isOfficial ? '#f97316' : '#6b7280')
+
     if (gpxUrl) {
       fetch(gpxUrl)
         .then(res => res.text())
         .then(text => {
-          // Mapa už byla zničena — nic nedělej
           if (destroyedRef.current || !mapRef.current) return
-
           const points = parseGpx(text)
           if (points.length > 0) {
             const polyline = L.polyline(points, {
-              color: isOfficial ? '#f97316' : '#6b7280',
+              color: trailColor,
               weight: 4,
               opacity: 0.9
             }).addTo(map)
@@ -100,7 +101,7 @@ export default function TrailMap({ lat, lng, name, isOfficial, gpxUrl }: Props) 
       map.remove()
       mapRef.current = null
     }
-  }, [lat, lng, name, isOfficial, gpxUrl])
+  }, [lat, lng, name, isOfficial, gpxUrl, gpxColor])
 
   const handleLocate = () => {
     if (!navigator.geolocation) {
