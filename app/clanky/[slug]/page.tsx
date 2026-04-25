@@ -3,9 +3,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
-
-const Editor = dynamic(() => import('../../components/Editor'), { ssr: false })
 
 export default function ArticleDetail() {
   const { slug } = useParams()
@@ -31,11 +28,16 @@ export default function ArticleDetail() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: articleData } = await supabase
+      console.log('slug:', slug)
+
+      const { data: articleData, error } = await supabase
         .from('articles')
         .select('*')
         .eq('slug', slug)
         .single()
+
+      console.log('articleData:', articleData)
+      console.log('error:', error)
 
       const { data: userData } = await supabase.auth.getUser()
       if (userData.user) {
@@ -113,13 +115,11 @@ export default function ArticleDetail() {
           <p className="text-gray-400 text-lg mb-6 leading-relaxed">{article.excerpt}</p>
         )}
 
-        {/* Obsah článku */}
         <div
           className="prose prose-invert prose-orange max-w-none text-gray-300 leading-relaxed"
           dangerouslySetInnerHTML={{ __html: article.content || '' }}
         />
 
-        {/* Tlačítko upravit */}
         {canEdit && (
           <div className="mt-8 pt-6 border-t border-gray-800">
             <button
