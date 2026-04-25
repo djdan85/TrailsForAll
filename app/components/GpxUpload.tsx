@@ -27,13 +27,23 @@ export default function GpxUpload({ onUpload }: Props) {
   const parseGpx = (text: string): [number, number][] => {
     const parser = new DOMParser()
     const xml = parser.parseFromString(text, 'application/xml')
-    const trkpts = xml.querySelectorAll('trkpt')
     const points: [number, number][] = []
-    trkpts.forEach(pt => {
-      const lat = parseFloat(pt.getAttribute('lat') || '')
-      const lon = parseFloat(pt.getAttribute('lon') || '')
-      if (!isNaN(lat) && !isNaN(lon)) points.push([lat, lon])
-    })
+
+    // Zkusíme všechny tři typy bodů
+    const selectors = ['trkpt', 'rtept', 'wpt']
+
+    for (const selector of selectors) {
+      const nodes = xml.querySelectorAll(selector)
+      if (nodes.length > 0) {
+        nodes.forEach(pt => {
+          const lat = parseFloat(pt.getAttribute('lat') || '')
+          const lon = parseFloat(pt.getAttribute('lon') || '')
+          if (!isNaN(lat) && !isNaN(lon)) points.push([lat, lon])
+        })
+        if (points.length > 0) break // Jakmile najdeme body, skončíme
+      }
+    }
+
     return points
   }
 
@@ -41,7 +51,7 @@ export default function GpxUpload({ onUpload }: Props) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (!file.name.endsWith('.gpx')) {
+    if (!file.name.toLowerCase().endsWith('.gpx')) {
       alert('Nahraj prosím soubor ve formátu .gpx')
       return
     }
@@ -58,7 +68,7 @@ export default function GpxUpload({ onUpload }: Props) {
       const points = parseGpx(text)
 
       if (points.length === 0) {
-        alert('GPX soubor neobsahuje žádné body trasy.')
+        alert('GPX soubor neobsahuje žádné body trasy. Zkontroluj formát souboru.')
         setUploading(false)
         return
       }
@@ -86,6 +96,7 @@ export default function GpxUpload({ onUpload }: Props) {
       onUpload(data.url, points, selectedColor)
     } catch (err) {
       alert('Chyba při zpracování GPX souboru.')
+      console.error(err)
     }
 
     setUploading(false)
