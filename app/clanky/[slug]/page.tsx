@@ -5,7 +5,8 @@ import { supabase } from '../../lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 
 export default function ArticleDetail() {
-  const { slug } = useParams()
+  const params = useParams()
+  const slug = params?.slug as string
   const router = useRouter()
   const [article, setArticle] = useState<any>(null)
   const [loading, setLoading] = useState(true)
