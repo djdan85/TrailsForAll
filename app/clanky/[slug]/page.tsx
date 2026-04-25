@@ -29,7 +29,13 @@ export default function ArticleDetail() {
 
   useEffect(() => {
     const fetchData = async () => {
+      console.log('params:', params)
       console.log('slug:', slug)
+
+      if (!slug) {
+        setLoading(false)
+        return
+      }
 
       const { data: articleData, error } = await supabase
         .from('articles')
@@ -55,7 +61,7 @@ export default function ArticleDetail() {
       setLoading(false)
     }
 
-    if (slug) fetchData()
+    fetchData()
   }, [slug])
 
   const canEditAll = profile?.role && ['admin', 'superadmin'].includes(profile.role)
