@@ -8,56 +8,21 @@ import GpxUpload from '../components/GpxUpload'
 import dynamic from 'next/dynamic'
 
 const RouteMap = dynamic(() => import('../components/RouteMap'), { ssr: false })
+const TrailMap = dynamic(() => import('../components/TrailMap'), { ssr: false })
 
 const trailTypes = [
-  {
-    value: 'singltrek',
-    label: '🚵 Singltrek / Trail',
-    desc: 'Úzká stezka v terénu, většinou v lese. Technické sekce, kořeny, kameny. Klasika pro MTB.'
-  },
-  {
-    value: 'pumptrack',
-    label: '🔁 Pumptrack',
-    desc: 'Okruh s vlnami a zatáčkami. Jedeš bez šlapání — jen pumpuješ tělem. Baví všechny věkové kategorie.'
-  },
-  {
-    value: 'skatepark',
-    label: '🛹 Skatepark',
-    desc: 'Betonový nebo dřevěný park s rampami, bowlem nebo překážkami. Ideální pro BMX, dirt a triky.'
-  },
-  {
-    value: 'bikepark',
-    label: '🏔️ Bikepark',
-    desc: 'Organizovaný areál s vyznačenými sjezdovkami a flow traily. Většinou lanovka nahoru, dolů na kole.'
-  },
-  {
-    value: 'crosscountry',
-    label: '🛤️ Cross-country trasa',
-    desc: 'Delší okruh nebo trasa krajinou — les, louky, kopce. Mix cest a singltreku. Důraz na vzdálenost a kondici.'
-  },
+  { value: 'singltrek', label: '🚵 Singltrek / Trail', desc: 'Úzká stezka v terénu, většinou v lese. Technické sekce, kořeny, kameny. Klasika pro MTB.' },
+  { value: 'pumptrack', label: '🔁 Pumptrack', desc: 'Okruh s vlnami a zatáčkami. Jedeš bez šlapání — jen pumpuješ tělem. Baví všechny věkové kategorie.' },
+  { value: 'skatepark', label: '🛹 Skatepark', desc: 'Betonový nebo dřevěný park s rampami, bowlem nebo překážkami. Ideální pro BMX, dirt a triky.' },
+  { value: 'bikepark', label: '🏔️ Bikepark', desc: 'Organizovaný areál s vyznačenými sjezdovkami a flow traily. Většinou lanovka nahoru, dolů na kole.' },
+  { value: 'crosscountry', label: '🛤️ Cross-country trasa', desc: 'Delší okruh nebo trasa krajinou — les, louky, kopce. Mix cest a singltreku. Důraz na vzdálenost a kondici.' },
 ]
 
 const skillLevels = [
-  {
-    value: 'zacatecnik',
-    label: '🟢 Začátečník',
-    desc: 'První kilometry na kole, žádné riziko. Rovný terén, žádné technické překážky.'
-  },
-  {
-    value: 'pokrocily',
-    label: '🔵 Pokročilý biker',
-    desc: 'Trochu praxe za sebou, základní technika jízdy. Zvládne mírné kopce a jednoduché terénní nerovnosti.'
-  },
-  {
-    value: 'zkuseny',
-    label: '🟠 Zkušený biker',
-    desc: 'Technické sekce, slušná kondice, kořeny a kameny nejsou problém. Jezdí pravidelně a ví co dělá.'
-  },
-  {
-    value: 'zabijak',
-    label: '⚫ Zabijácký BIKER',
-    desc: 'Jen pro ostřílené matadory. Pořádná dřina, technické výzvy, adrenalin na maximum. Slabší povahy ať raději jedou domů.'
-  },
+  { value: 'zacatecnik', label: '🟢 Začátečník', desc: 'První kilometry na kole, žádné riziko. Rovný terén, žádné technické překážky.' },
+  { value: 'pokrocily', label: '🔵 Pokročilý biker', desc: 'Trochu praxe za sebou, základní technika jízdy. Zvládne mírné kopce a jednoduché terénní nerovnosti.' },
+  { value: 'zkuseny', label: '🟠 Zkušený biker', desc: 'Technické sekce, slušná kondice, kořeny a kameny nejsou problém. Jezdí pravidelně a ví co dělá.' },
+  { value: 'zabijak', label: '⚫ Zabijácký BIKER', desc: 'Jen pro ostřílené matadory. Pořádná dřina, technické výzvy, adrenalin na maximum. Slabší povahy ať raději jedou domů.' },
 ]
 
 export default function AddTrail() {
@@ -68,8 +33,10 @@ export default function AddTrail() {
   const [routePoints, setRoutePoints] = useState<[number, number][]>([])
   const [gpxUrl, setGpxUrl] = useState('')
   const [gpxColor, setGpxColor] = useState('#22c55e')
+  const [gpxPoints, setGpxPoints] = useState<[number, number][]>([])
   const [region, setRegion] = useState('')
   const [photos, setPhotos] = useState<UploadedPhoto[]>([])
+  const [previewKey, setPreviewKey] = useState(0)
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -97,12 +64,15 @@ export default function AddTrail() {
 
   const handleGpxUpload = (url: string, points: [number, number][], color?: string) => {
     setGpxUrl(url)
+    setGpxPoints(points)
     if (color) setGpxColor(color)
     if (points.length > 0) {
       setRoutePoints([points[0]])
     } else {
       setRoutePoints([])
+      setGpxPoints([])
     }
+    setPreviewKey(k => k + 1)
   }
 
   const handleSubmit = async () => {
@@ -147,7 +117,6 @@ export default function AddTrail() {
       return
     }
 
-    // Uložení fotek do trail_photos
     if (photos.length > 0) {
       const photosToInsert = photos.map((p) => ({
         trail_id: trailData.id,
@@ -282,9 +251,7 @@ export default function AddTrail() {
                 type="button"
                 onClick={() => setForm(prev => ({ ...prev, is_official: true }))}
                 className={`flex-1 py-3 rounded-xl font-semibold text-sm transition ${
-                  form.is_official
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  form.is_official ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                 }`}
               >
                 ✅ Oficiální
@@ -293,9 +260,7 @@ export default function AddTrail() {
                 type="button"
                 onClick={() => setForm(prev => ({ ...prev, is_official: false }))}
                 className={`flex-1 py-3 rounded-xl font-semibold text-sm transition ${
-                  !form.is_official
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  !form.is_official ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                 }`}
               >
                 ☠️ Neoficiální
@@ -308,29 +273,65 @@ export default function AddTrail() {
             )}
           </div>
 
-          {/* Mapa */}
+          {/* GPX upload */}
+          <GpxUpload onUpload={handleGpxUpload} />
+
+          {/* Preview mapy — po nahrání GPX zobrazí trasu, jinak picker */}
           <div>
             <label className="text-gray-400 text-sm mb-1 block">
               Poloha
-              <span className="text-gray-600 ml-1">— klikni na mapu, nebo se doplní z GPX</span>
+              <span className="text-gray-600 ml-1">
+                {gpxUrl ? '— trasa z GPX souboru' : '— klikni na mapu pro označení startu'}
+              </span>
             </label>
-            <RouteMap
-              points={routePoints}
-              onChange={(pts, reg) => {
-                setRoutePoints(pts)
-                if (reg) setRegion(reg)
-              }}
-            />
+
+            {gpxUrl && gpxPoints.length > 0 ? (
+              // Po nahrání GPX — zobraz celou trasu
+              <div style={{ height: '380px', borderRadius: '12px', overflow: 'hidden' }}>
+                <TrailMap
+                  key={previewKey}
+                  lat={routePoints[0][0]}
+                  lng={routePoints[0][1]}
+                  name={form.name || 'Nový trail'}
+                  isOfficial={form.is_official}
+                  gpxUrl={gpxUrl}
+                  gpxColor={gpxColor}
+                />
+              </div>
+            ) : (
+              // Bez GPX — klasický picker
+              <RouteMap
+                points={routePoints}
+                onChange={(pts, reg) => {
+                  setRoutePoints(pts)
+                  if (reg) setRegion(reg)
+                }}
+              />
+            )}
+
             {routePoints.length > 0 && (
               <p className="text-gray-600 text-xs mt-1">
                 📍 {routePoints[0][0].toFixed(5)}, {routePoints[0][1].toFixed(5)}
                 {region && <span className="ml-2">· {region}</span>}
               </p>
             )}
-          </div>
 
-          {/* GPX */}
-          <GpxUpload onUpload={handleGpxUpload} />
+            {/* Tlačítko pro reset GPX a návrat k pickeru */}
+            {gpxUrl && (
+              <button
+                type="button"
+                onClick={() => {
+                  setGpxUrl('')
+                  setGpxPoints([])
+                  setRoutePoints([])
+                  setPreviewKey(k => k + 1)
+                }}
+                className="mt-2 text-red-400 text-xs hover:text-red-300 transition"
+              >
+                ✕ Zrušit GPX a označit start ručně
+              </button>
+            )}
+          </div>
 
           {/* Fotografie */}
           <div>
