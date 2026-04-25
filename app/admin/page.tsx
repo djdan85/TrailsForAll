@@ -67,6 +67,16 @@ const categoryColor: { [key: string]: string } = {
   reportaze: 'bg-orange-900 text-orange-400',
 }
 
+const colorOptions = [
+  { label: 'Zelená', value: '#22c55e', bg: 'bg-green-500' },
+  { label: 'Modrá', value: '#3b82f6', bg: 'bg-blue-500' },
+  { label: 'Červená', value: '#ef4444', bg: 'bg-red-500' },
+  { label: 'Černá', value: '#111827', bg: 'bg-gray-900' },
+  { label: 'Žlutá', value: '#eab308', bg: 'bg-yellow-500' },
+  { label: 'Oranžová', value: '#f97316', bg: 'bg-orange-500' },
+  { label: 'Bílá', value: '#ffffff', bg: 'bg-white' },
+]
+
 export default function Admin() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -200,6 +210,7 @@ export default function Admin() {
       maps_url: editingTrail.maps_url || null,
       website_url: editingTrail.website_url || null,
       is_official: editingTrail.is_official,
+      gpx_color: editingTrail.gpx_color || '#22c55e',
       updated_at: new Date().toISOString(),
       updated_by: user.id,
     }).eq('id', editingTrail.id)
@@ -344,74 +355,23 @@ export default function Admin() {
                     )}
                   </div>
                   {article.cover_url && (
-                    <img
-                      src={article.cover_url}
-                      alt={article.title}
-                      className="w-20 h-16 object-cover rounded-xl ml-4 flex-shrink-0"
-                    />
+                    <img src={article.cover_url} alt={article.title} className="w-20 h-16 object-cover rounded-xl ml-4 flex-shrink-0" />
                   )}
                 </div>
-
-                <p className="text-gray-600 text-xs mb-4">
-                  Vytvořeno: {formatDate(article.created_at)}
-                </p>
-
+                <p className="text-gray-600 text-xs mb-4">Vytvořeno: {formatDate(article.created_at)}</p>
                 <div className="flex gap-2 flex-wrap">
                   {article.status === 'deleted' ? (
                     <>
-                      <button
-                        onClick={() => updateArticleStatus(article.id, 'draft')}
-                        className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition"
-                      >
-                        ♻️ Obnovit
-                      </button>
-                      {isSuper && (
-                        <button
-                          onClick={() => deleteArticlePermanently(article.id)}
-                          className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition"
-                        >
-                          🗑 Trvale smazat
-                        </button>
-                      )}
+                      <button onClick={() => updateArticleStatus(article.id, 'draft')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">♻️ Obnovit</button>
+                      {isSuper && <button onClick={() => deleteArticlePermanently(article.id)} className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-700 transition">🗑 Trvale smazat</button>}
                     </>
                   ) : (
                     <>
-                      {article.status !== 'published' && (
-                        <button
-                          onClick={() => updateArticleStatus(article.id, 'published')}
-                          className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition"
-                        >
-                          ✅ Publikovat
-                        </button>
-                      )}
-                      {article.status === 'published' && (
-                        <button
-                          onClick={() => updateArticleStatus(article.id, 'draft')}
-                          className="bg-gray-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-gray-700 transition"
-                        >
-                          📄 Vrátit do konceptu
-                        </button>
-                      )}
-                      {article.status !== 'rejected' && (
-                        <button
-                          onClick={() => updateArticleStatus(article.id, 'rejected')}
-                          className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition"
-                        >
-                          ❌ Zamítnout
-                        </button>
-                      )}
-                      <button
-                        onClick={() => router.push(`/clanky/${article.slug}`)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition"
-                      >
-                        👁 Zobrazit
-                      </button>
-                      <button
-                        onClick={() => updateArticleStatus(article.id, 'deleted')}
-                        className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition"
-                      >
-                        🗑 Do koše
-                      </button>
+                      {article.status !== 'published' && <button onClick={() => updateArticleStatus(article.id, 'published')} className="bg-green-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-green-700 transition">✅ Publikovat</button>}
+                      {article.status === 'published' && <button onClick={() => updateArticleStatus(article.id, 'draft')} className="bg-gray-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-gray-700 transition">📄 Vrátit do konceptu</button>}
+                      {article.status !== 'rejected' && <button onClick={() => updateArticleStatus(article.id, 'rejected')} className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-yellow-700 transition">❌ Zamítnout</button>}
+                      <button onClick={() => router.push(`/clanky/${article.slug}`)} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition">👁 Zobrazit</button>
+                      <button onClick={() => updateArticleStatus(article.id, 'deleted')} className="bg-red-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-red-900 transition">🗑 Do koše</button>
                     </>
                   )}
                 </div>
@@ -432,37 +392,18 @@ export default function Admin() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                   {group.photos.map((photo: any) => (
-                    <div
-                      key={photo.id}
-                      className={`relative rounded-xl overflow-hidden border-2 transition ${
-                        photo.is_primary ? 'border-orange-500' : 'border-gray-700'
-                      }`}
-                    >
+                    <div key={photo.id} className={`relative rounded-xl overflow-hidden border-2 transition ${photo.is_primary ? 'border-orange-500' : 'border-gray-700'}`}>
                       <img src={photo.url} alt="Fotka" className="w-full h-28 object-cover" />
                       {photo.is_primary && (
-                        <div className="absolute top-1 left-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded font-medium">
-                          Hlavní
-                        </div>
+                        <div className="absolute top-1 left-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded font-medium">Hlavní</div>
                       )}
                       <div className="absolute top-1 right-1">
-                        <button
-                          onClick={() => deletePhoto(photo.id)}
-                          className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                        >
-                          ×
-                        </button>
+                        <button onClick={() => deletePhoto(photo.id)} className="bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600">×</button>
                       </div>
                       {!photo.is_primary ? (
-                        <button
-                          onClick={() => setPrimaryPhoto(photo)}
-                          className="w-full bg-black/60 text-white text-xs py-1.5 hover:bg-orange-500/80 transition"
-                        >
-                          ★ Nastavit jako hlavní
-                        </button>
+                        <button onClick={() => setPrimaryPhoto(photo)} className="w-full bg-black/60 text-white text-xs py-1.5 hover:bg-orange-500/80 transition">★ Nastavit jako hlavní</button>
                       ) : (
-                        <div className="w-full bg-orange-500/20 text-orange-400 text-xs py-1.5 text-center">
-                          ✓ Hlavní fotka
-                        </div>
+                        <div className="w-full bg-orange-500/20 text-orange-400 text-xs py-1.5 text-center">✓ Hlavní fotka</div>
                       )}
                     </div>
                   ))}
@@ -562,6 +503,29 @@ export default function Admin() {
                         </div>
                       </div>
 
+                      {/* Barva GPX trasy */}
+                      <div>
+                        <label className="text-gray-400 text-xs mb-2 block">Barva GPX trasy na mapě</label>
+                        <div className="flex gap-2 flex-wrap">
+                          {colorOptions.map((color) => (
+                            <button
+                              key={color.value}
+                              type="button"
+                              onClick={() => setEditingTrail({...editingTrail, gpx_color: color.value})}
+                              title={color.label}
+                              className={`w-8 h-8 rounded-full border-4 transition ${color.bg} ${
+                                (editingTrail.gpx_color || '#22c55e') === color.value
+                                  ? 'border-orange-500 scale-110'
+                                  : 'border-transparent hover:border-gray-400'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-gray-600 text-xs mt-1">
+                          Vybraná: {colorOptions.find(c => c.value === (editingTrail.gpx_color || '#22c55e'))?.label}
+                        </p>
+                      </div>
+
                       <div>
                         <label className="text-gray-400 text-xs mb-1 block">Poloha startu — klikni na mapu</label>
                         <RouteMap
@@ -595,6 +559,12 @@ export default function Admin() {
                               <span className="text-xs px-2 py-0.5 rounded-lg border border-green-400/30 text-green-400 bg-gray-800">✅ Oficiální</span>
                             ) : (
                               <span className="text-xs px-2 py-0.5 rounded-lg border border-orange-400/30 text-orange-400 bg-gray-800">☠️ Neoficiální</span>
+                            )}
+                            {trail.gpx_url && trail.gpx_color && (
+                              <span className="flex items-center gap-1 text-xs text-gray-400">
+                                <span style={{ backgroundColor: trail.gpx_color }} className="w-3 h-3 rounded-full inline-block" />
+                                GPX
+                              </span>
                             )}
                           </div>
                           <p className="text-gray-400 text-sm">{trail.location_name}</p>
