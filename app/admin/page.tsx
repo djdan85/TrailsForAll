@@ -99,14 +99,11 @@ export default function Admin() {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser()
       if (!data.user) { router.push('/'); return }
-
       const { data: profileData } = await supabase
         .from('profiles').select('*').eq('id', data.user.id).single()
-
       if (!profileData || (!['moderator', 'admin', 'superadmin'].includes(profileData.role) && data.user.email !== ADMIN_EMAIL)) {
         router.push('/'); return
       }
-
       setUser(data.user)
       setProfile(profileData)
       fetchAll()
@@ -128,10 +125,7 @@ export default function Admin() {
     const { data: membersData } = await supabase
       .from('profiles').select('*').gte('created_at', today.toISOString()).order('created_at', { ascending: false })
     const { data: photosData } = await supabase
-      .from('trail_photos')
-      .select('*, trails(name)')
-      .order('created_at', { ascending: false })
-
+      .from('trail_photos').select('*, trails(name)').order('created_at', { ascending: false })
     setTrails(trailsData || [])
     setReviews(reviewsData || [])
     setArticles(articlesData || [])
@@ -158,9 +152,7 @@ export default function Admin() {
 
   const updateArticleStatus = async (id: string, status: string) => {
     const updateData: any = { status }
-    if (status === 'published') {
-      updateData.published_at = new Date().toISOString()
-    }
+    if (status === 'published') updateData.published_at = new Date().toISOString()
     await supabase.from('articles').update(updateData).eq('id', id)
     fetchAll()
   }
@@ -199,7 +191,6 @@ export default function Admin() {
   const saveTrailEdit = async () => {
     const lat = editRoutePoints.length > 0 ? editRoutePoints[0][0] : parseFloat(editingTrail.lat)
     const lng = editRoutePoints.length > 0 ? editRoutePoints[0][1] : parseFloat(editingTrail.lng)
-
     const { error } = await supabase.from('trails').update({
       name: editingTrail.name,
       description: editingTrail.description,
@@ -216,7 +207,6 @@ export default function Admin() {
       updated_at: new Date().toISOString(),
       updated_by: user.id,
     }).eq('id', editingTrail.id)
-
     if (!error) {
       setEditingTrail(null)
       setEditRoutePoints([])
@@ -228,7 +218,6 @@ export default function Admin() {
   const filteredTrails = filter === 'all'
     ? trails.filter(t => t.status !== 'deleted')
     : trails.filter(t => t.status === filter)
-
   const pendingArticles = articles.filter(a => a.status === 'pending')
 
   const formatDate = (date: string) => {
@@ -241,9 +230,7 @@ export default function Admin() {
 
   const photosByTrail = photos.reduce((acc: any, photo: any) => {
     const trailId = photo.trail_id
-    if (!acc[trailId]) {
-      acc[trailId] = { trailName: photo.trails?.name || 'Neznámý trail', trailId, photos: [] }
-    }
+    if (!acc[trailId]) acc[trailId] = { trailName: photo.trails?.name || 'Neznámý trail', trailId, photos: [] }
     acc[trailId].photos.push(photo)
     return acc
   }, {})
@@ -269,10 +256,7 @@ export default function Admin() {
               {profile?.role === 'superadmin' ? 'Superadmin' : profile?.role === 'admin' ? 'Admin' : 'Moderátor'}
             </span>
             {isSuper && (
-              <button
-                onClick={() => router.push('/admin/users')}
-                className="bg-gray-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-gray-700 transition"
-              >
+              <button onClick={() => router.push('/admin/users')} className="bg-gray-800 text-white px-4 py-2 rounded-xl text-sm hover:bg-gray-700 transition">
                 👥 Uživatelé ({users.length})
               </button>
             )}
@@ -501,7 +485,7 @@ export default function Admin() {
                         </div>
                       </div>
 
-                      {/* Barva GPX trasy — inline style místo Tailwind */}
+                      {/* Barva GPX trasy — vždy viditelná */}
                       <div>
                         <label className="text-gray-400 text-xs mb-2 block">Barva GPX trasy na mapě</label>
                         <div className="flex gap-2 flex-wrap">
@@ -547,7 +531,7 @@ export default function Admin() {
                         )}
                       </div>
 
-                      {/* GPX preview */}
+                      {/* GPX preview — jen když má trail GPX */}
                       {editingTrail.gpx_url && (
                         <div>
                           <label className="text-gray-400 text-xs mb-2 block">Preview GPX trasy</label>
