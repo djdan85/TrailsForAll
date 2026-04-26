@@ -301,6 +301,7 @@ function TrailMarkerCluster({ trails }: { trails: any[] }) {
 export default function Map({ trails }: { trails: any[] }) {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
   const [locating, setLocating] = useState(false)
+  const [legendOpen, setLegendOpen] = useState(false)
 
   const handleLocate = () => {
     if (!navigator.geolocation) {
@@ -349,35 +350,74 @@ export default function Map({ trails }: { trails: any[] }) {
         <FlyToLocation coords={userLocation} />
       </MapContainer>
 
-      {/* Legenda */}
+      {/* Sbalitelná legenda */}
       <div
         style={{
           position: 'absolute',
           top: '10px',
           right: '10px',
           zIndex: 1000,
-          background: 'rgba(0,0,0,0.75)',
-          borderRadius: '10px',
-          padding: '8px 10px',
-          fontSize: '11px',
+          background: 'rgba(0,0,0,0.78)',
+          borderRadius: '12px',
           color: 'white',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '3px',
-          maxWidth: '145px',
+          overflow: 'hidden',
+          boxShadow: '0 3px 12px rgba(0,0,0,0.35)',
+          maxWidth: '170px',
         }}
       >
-        <p style={{ fontWeight: 'bold', marginBottom: '2px', color: '#f97316' }}>Typy míst</p>
-        <p>🚵 Singltrek</p>
-        <p>🔁 Pumptrack</p>
-        <p>🛹 Skatepark</p>
-        <p>🏔️ Bikepark</p>
-        <p>🛤️ Cross-country</p>
+        <button
+          type="button"
+          onClick={() => setLegendOpen((prev) => !prev)}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            color: 'white',
+            border: 'none',
+            padding: '8px 10px',
+            fontSize: '12px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+          }}
+        >
+          <span>Legenda</span>
+          <span style={{ color: '#f97316' }}>{legendOpen ? '▲' : '▼'}</span>
+        </button>
 
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', marginTop: '4px', paddingTop: '4px' }}>
-          <p style={{ fontWeight: 'bold', marginBottom: '2px', color: '#f97316' }}>Mapa</p>
-          <p>Oranžové číslo = více trailů v oblasti</p>
-        </div>
+        {legendOpen && (
+          <div
+            style={{
+              padding: '0 10px 9px',
+              fontSize: '11px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px',
+            }}
+          >
+            <p style={{ fontWeight: 'bold', marginTop: '2px', marginBottom: '2px', color: '#f97316' }}>
+              Typy míst
+            </p>
+            <p>🚵 Singltrek</p>
+            <p>🔁 Pumptrack</p>
+            <p>🛹 Skatepark</p>
+            <p>🏔️ Bikepark</p>
+            <p>🛤️ Cross-country</p>
+
+            <div
+              style={{
+                borderTop: '1px solid rgba(255,255,255,0.2)',
+                marginTop: '5px',
+                paddingTop: '5px',
+              }}
+            >
+              <p style={{ fontWeight: 'bold', marginBottom: '2px', color: '#f97316' }}>Mapa</p>
+              <p>Oranžové číslo = více trailů v oblasti</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <button
