@@ -97,6 +97,7 @@ export default function Admin() {
   const [filter, setFilter] = useState<StatusFilter>('pending')
   const [trailTypeFilter, setTrailTypeFilter] = useState<TrailTypeFilter>('all')
   const [trailSearch, setTrailSearch] = useState('')
+  const [selectedTrailIds, setSelectedTrailIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [editingTrail, setEditingTrail] = useState<any>(null)
   const [editRoutePoints, setEditRoutePoints] = useState<[number, number][]>([])
@@ -187,7 +188,58 @@ export default function Admin() {
     }
 
     await supabase.from('trails').update(updateData).eq('id', id)
+    setSelectedTrailIds((prev) => prev.filter((trailId) => trailId !== id))
     fetchAll()
+  }
+
+  const bulkUpdateTrailStatus = async (status: string) => {
+    if (selectedTrailIds.length === 0) return
+
+    const statusText = statusLabel[status] || status
+    const confirmed = confirm(`Opravdu chceš změnit ${selectedTrailIds.length} vybraných trailů na stav: ${statusText}?`)
+
+    if (!confirmed) return
+
+    const updateData: any = {
+      status,
+      updated_at: new Date().toISOString(),
+      updated_by: user.id,
+    }
+
+    if (status === 'approved') {
+      updateData.approved_at = new Date().toISOString()
+      updateData.approved_by = user.id
+    }
+
+    const { error } = await supabase
+      .from('trails')
+      .update(updateData)
+      .in('id', selectedTrailIds)
+
+    if (error) {
+      alert('Chyba při hromadné změně: ' + error.message)
+      return
+    }
+
+    setSelectedTrailIds([])
+    fetchAll()
+  }
+
+  const toggleTrailSelection = (id: string) => {
+    setSelectedTrailIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((trailId) => trailId !== id)
+        : [...prev, id]
+    )
+  }
+
+  const selectAllVisibleTrails = (visibleTrails: any[]) => {
+    const visibleIds = visibleTrails.map((trail) => trail.id)
+    setSelectedTrailIds(visibleIds)
+  }
+
+  const clearTrailSelection = () => {
+    setSelectedTrailIds([])
   }
 
   const updateReviewStatus = async (id: string, status: string) => {
@@ -209,6 +261,7 @@ export default function Admin() {
   const deleteTrailPermanently = async (id: string) => {
     if (!confirm('Opravdu chceš trvale smazat tento trail? Tato akce je nevratná.')) return
     await supabase.from('trails').delete().eq('id', id)
+    setSelectedTrailIds((prev) => prev.filter((trailId) => trailId !== id))
     fetchAll()
   }
 
@@ -336,6 +389,9 @@ export default function Admin() {
 
     return searchableText.includes(normalizedTrailSearch)
   })
+
+  const selectedVisibleCount = filteredTrails.filter((trail) => selectedTrailIds.includes(trail.id)).length
+  const allVisibleSelected = filteredTrails.length > 0 && selectedVisibleCount === filteredTrails.length
 
   const pendingArticles = articles.filter((a) => a.status === 'pending')
 
@@ -682,7 +738,10 @@ export default function Admin() {
               {(['pending', 'all', 'approved', 'rejected', 'deleted'] as const).map((f) => (
                 <button
                   key={f}
-                  onClick={() => setFilter(f)}
+                  onClick={() => {
+                    setFilter(f)
+                    setSelectedTrailIds([])
+                  }}
                   className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition ${
                     filter === f ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                   }`}
@@ -701,7 +760,7 @@ export default function Admin() {
             </div>
 
             {/* Vyhledávání a typový filtr trailů */}
-            <div className="bg-gray-900 rounded-2xl p-4 mb-6 flex flex-col gap-4">
+            <div className="bg-gray-900 rounded-2xl p-4 mb-4 flex flex-col gap-4">
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">
                   Vyhledávání v trailech
@@ -710,7 +769,10 @@ export default function Admin() {
                 <div className="flex gap-2">
                   <input
                     value={trailSearch}
-                    onChange={(e) => setTrailSearch(e.target.value)}
+                    onChange={(e) => {
+                      setTrailSearch(e.target.value)
+                      setSelectedTrailIds([])
+                    }}
                     placeholder="Hledat podle názvu, lokality, kraje, typu, obtížnosti..."
                     className="flex-1 bg-gray-800 text-white rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-orange-500 text-sm"
                   />
@@ -718,7 +780,10 @@ export default function Admin() {
                   {trailSearch && (
                     <button
                       type="button"
-                      onClick={() => setTrailSearch('')}
+                      onClick={() => {
+                        setTrailSearch('')
+                        setSelectedTrailIds([])
+                      }}
                       className="bg-gray-800 text-gray-300 px-3 py-2.5 rounded-xl text-sm hover:bg-gray-700 transition"
                     >
                       ✕
@@ -744,7 +809,10 @@ export default function Admin() {
                     <button
                       key={type.value}
                       type="button"
-                      onClick={() => setTrailTypeFilter(type.value as TrailTypeFilter)}
+                      onClick={() => {
+                        setTrailTypeFilter(type.value as TrailTypeFilter)
+                        setSelectedTrailIds([])
+                      }}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
                         trailTypeFilter === type.value
                           ? 'bg-orange-500 text-white'
@@ -769,12 +837,86 @@ export default function Admin() {
                     onClick={() => {
                       setTrailSearch('')
                       setTrailTypeFilter('all')
+                      setSelectedTrailIds([])
                     }}
                     className="text-xs text-red-400 hover:text-red-300 transition"
                   >
                     Vymazat hledání a filtr typu
                   </button>
                 )}
+              </div>
+            </div>
+
+            {/* Hromadné akce */}
+            <div className="bg-gray-900 rounded-2xl p-4 mb-6 flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-white font-semibold text-sm">Hromadné akce</p>
+                  <p className="text-gray-500 text-xs">
+                    Vybráno: <span className="text-orange-400 font-bold">{selectedTrailIds.length}</span> trailů
+                    {selectedVisibleCount > 0 && (
+                      <span> · z aktuálního výpisu: {selectedVisibleCount}</span>
+                    )}
+                  </p>
+                </div>
+
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => selectAllVisibleTrails(filteredTrails)}
+                    disabled={filteredTrails.length === 0 || allVisibleSelected}
+                    className="bg-gray-800 text-gray-300 px-3 py-2 rounded-xl text-xs hover:bg-gray-700 transition disabled:opacity-40"
+                  >
+                    Vybrat vše z výpisu
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={clearTrailSelection}
+                    disabled={selectedTrailIds.length === 0}
+                    className="bg-gray-800 text-gray-300 px-3 py-2 rounded-xl text-xs hover:bg-gray-700 transition disabled:opacity-40"
+                  >
+                    Zrušit výběr
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => bulkUpdateTrailStatus('approved')}
+                  disabled={selectedTrailIds.length === 0}
+                  className="bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-green-700 transition disabled:opacity-40"
+                >
+                  ✅ Schválit vybrané
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => bulkUpdateTrailStatus('rejected')}
+                  disabled={selectedTrailIds.length === 0}
+                  className="bg-yellow-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-yellow-700 transition disabled:opacity-40"
+                >
+                  ❌ Zamítnout vybrané
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => bulkUpdateTrailStatus('pending')}
+                  disabled={selectedTrailIds.length === 0}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-blue-700 transition disabled:opacity-40"
+                >
+                  ⏳ Vrátit ke schválení
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => bulkUpdateTrailStatus('deleted')}
+                  disabled={selectedTrailIds.length === 0}
+                  className="bg-red-800 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-red-900 transition disabled:opacity-40"
+                >
+                  🗑 Přesunout do koše
+                </button>
               </div>
             </div>
 
@@ -788,9 +930,13 @@ export default function Admin() {
               {filteredTrails.map((trail) => (
                 <div
                   key={trail.id}
-                  className={`rounded-2xl overflow-hidden ${
-                    trail.status === 'deleted' ? 'bg-red-950 border border-red-900' : 'bg-gray-900'
-                  }`}
+                  className={`rounded-2xl overflow-hidden border ${
+                    selectedTrailIds.includes(trail.id)
+                      ? 'border-orange-500'
+                      : trail.status === 'deleted'
+                        ? 'border-red-900 bg-red-950'
+                        : 'border-transparent bg-gray-900'
+                  } ${trail.status === 'deleted' ? 'bg-red-950' : 'bg-gray-900'}`}
                 >
                   {editingTrail?.id === trail.id ? (
                     <div className="p-6 flex flex-col gap-4">
@@ -909,7 +1055,6 @@ export default function Admin() {
                         </div>
                       </div>
 
-                      {/* Barva GPX trasy — admin ji může upravit vždy */}
                       <div>
                         <label className="text-gray-400 text-xs mb-2 block">Barva GPX trasy na mapě</label>
 
@@ -955,7 +1100,6 @@ export default function Admin() {
                         </p>
                       </div>
 
-                      {/* GPX preview — když má trail GPX, ruční mapa se vůbec nezobrazuje */}
                       {editingTrail.gpx_url ? (
                         <div>
                           <label className="text-gray-400 text-xs mb-2 block">Preview GPX trasy</label>
@@ -1041,53 +1185,66 @@ export default function Admin() {
                     </div>
                   ) : (
                     <div className="p-5">
-                      <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start gap-3 mb-3">
+                        <label className="pt-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedTrailIds.includes(trail.id)}
+                            onChange={() => toggleTrailSelection(trail.id)}
+                            className="w-5 h-5 accent-orange-500 cursor-pointer"
+                          />
+                        </label>
+
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h2 className="text-white font-bold text-lg">{trail.name}</h2>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <h2 className="text-white font-bold text-lg">{trail.name}</h2>
 
-                            {trail.is_official ? (
-                              <span className="text-xs px-2 py-0.5 rounded-lg border border-green-400/30 text-green-400 bg-gray-800">
-                                ✅ Oficiální
-                              </span>
-                            ) : (
-                              <span className="text-xs px-2 py-0.5 rounded-lg border border-orange-400/30 text-orange-400 bg-gray-800">
-                                ☠️ Neoficiální
-                              </span>
-                            )}
+                                {trail.is_official ? (
+                                  <span className="text-xs px-2 py-0.5 rounded-lg border border-green-400/30 text-green-400 bg-gray-800">
+                                    ✅ Oficiální
+                                  </span>
+                                ) : (
+                                  <span className="text-xs px-2 py-0.5 rounded-lg border border-orange-400/30 text-orange-400 bg-gray-800">
+                                    ☠️ Neoficiální
+                                  </span>
+                                )}
 
-                            {trail.gpx_url && (
-                              <span className="flex items-center gap-1 text-xs text-gray-400">
-                                <span
-                                  style={{
-                                    backgroundColor: trail.gpx_color || DEFAULT_TRAIL_COLOR,
-                                    width: '12px',
-                                    height: '12px',
-                                    borderRadius: '50%',
-                                    display: 'inline-block',
-                                  }}
-                                />
-                                GPX
-                              </span>
-                            )}
+                                {trail.gpx_url && (
+                                  <span className="flex items-center gap-1 text-xs text-gray-400">
+                                    <span
+                                      style={{
+                                        backgroundColor: trail.gpx_color || DEFAULT_TRAIL_COLOR,
+                                        width: '12px',
+                                        height: '12px',
+                                        borderRadius: '50%',
+                                        display: 'inline-block',
+                                      }}
+                                    />
+                                    GPX
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="text-gray-400 text-sm">{trail.location_name}</p>
+                            </div>
+
+                            <span
+                              className={`ml-3 shrink-0 text-xs px-3 py-1 rounded-full font-semibold ${
+                                trail.status === 'pending'
+                                  ? 'bg-yellow-900 text-yellow-400'
+                                  : trail.status === 'approved'
+                                    ? 'bg-green-900 text-green-400'
+                                    : trail.status === 'deleted'
+                                      ? 'bg-red-900 text-red-400'
+                                      : 'bg-gray-700 text-gray-400'
+                              }`}
+                            >
+                              {statusLabel[trail.status]}
+                            </span>
                           </div>
-
-                          <p className="text-gray-400 text-sm">{trail.location_name}</p>
                         </div>
-
-                        <span
-                          className={`ml-3 shrink-0 text-xs px-3 py-1 rounded-full font-semibold ${
-                            trail.status === 'pending'
-                              ? 'bg-yellow-900 text-yellow-400'
-                              : trail.status === 'approved'
-                                ? 'bg-green-900 text-green-400'
-                                : trail.status === 'deleted'
-                                  ? 'bg-red-900 text-red-400'
-                                  : 'bg-gray-700 text-gray-400'
-                          }`}
-                        >
-                          {statusLabel[trail.status]}
-                        </span>
                       </div>
 
                       {trail.photo_url && (

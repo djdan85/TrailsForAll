@@ -190,6 +190,20 @@ function ZoomControl() {
   )
 }
 
+function MapResizeWatcher({ fullscreen }: { fullscreen: boolean }) {
+  const map = useMap()
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      map.invalidateSize()
+    }, 250)
+
+    return () => window.clearTimeout(timer)
+  }, [fullscreen, map])
+
+  return null
+}
+
 function FlyToLocation({ coords }: { coords: [number, number] | null }) {
   const map = useMap()
 
@@ -302,6 +316,32 @@ export default function Map({ trails }: { trails: any[] }) {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
   const [locating, setLocating] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
+
+  useEffect(() => {
+    if (!fullscreen) return
+
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = originalOverflow
+    }
+  }, [fullscreen])
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setFullscreen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
 
   const handleLocate = () => {
     if (!navigator.geolocation) {
@@ -333,7 +373,16 @@ export default function Map({ trails }: { trails: any[] }) {
   }
 
   return (
-    <div style={{ position: 'relative', height: '100%', width: '100%' }}>
+    <div
+      style={{
+        position: fullscreen ? 'fixed' : 'relative',
+        inset: fullscreen ? 0 : undefined,
+        height: fullscreen ? '100dvh' : '100%',
+        width: fullscreen ? '100vw' : '100%',
+        zIndex: fullscreen ? 99999 : 'auto',
+        background: '#020617',
+      }}
+    >
       <MapContainer
         center={[49.8175, 15.4730]}
         zoom={8}
@@ -348,7 +397,38 @@ export default function Map({ trails }: { trails: any[] }) {
 
         <ZoomControl />
         <FlyToLocation coords={userLocation} />
+        <MapResizeWatcher fullscreen={fullscreen} />
       </MapContainer>
+
+      {/* Tlačítko celá obrazovka / minimalizace */}
+      <button
+        type="button"
+        onClick={() => setFullscreen((prev) => !prev)}
+        title={fullscreen ? 'Zavřít celou obrazovku' : 'Zobrazit na celou obrazovku'}
+        style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          zIndex: 9999,
+          width: fullscreen ? '42px' : '44px',
+          height: fullscreen ? '42px' : '44px',
+          borderRadius: '12px',
+          background: fullscreen ? '#111827' : 'rgba(0,0,0,0.78)',
+          color: 'white',
+          border: '2px solid rgba(255,255,255,0.85)',
+          fontSize: fullscreen ? '22px' : '20px',
+          fontWeight: 900,
+          cursor: 'pointer',
+          boxShadow: '0 3px 12px rgba(0,0,0,0.35)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          touchAction: 'manipulation',
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        {fullscreen ? '✕' : '⛶'}
+      </button>
 
       {/* Sbalitelná legenda */}
       <div
@@ -362,7 +442,7 @@ export default function Map({ trails }: { trails: any[] }) {
           color: 'white',
           overflow: 'hidden',
           boxShadow: '0 3px 12px rgba(0,0,0,0.35)',
-          maxWidth: '170px',
+          maxWidth: fullscreen ? '190px' : '170px',
         }}
       >
         <button
@@ -415,6 +495,7 @@ export default function Map({ trails }: { trails: any[] }) {
             >
               <p style={{ fontWeight: 'bold', marginBottom: '2px', color: '#f97316' }}>Mapa</p>
               <p>Oranžové číslo = více trailů v oblasti</p>
+              {fullscreen && <p>✕ = zavřít celou obrazovku</p>}
             </div>
           </div>
         )}
@@ -431,7 +512,7 @@ export default function Map({ trails }: { trails: any[] }) {
         title="Moje poloha"
         style={{
           position: 'absolute',
-          bottom: '78px',
+          bottom: fullscreen ? '24px' : '78px',
           left: '10px',
           zIndex: 9999,
           width: '46px',
