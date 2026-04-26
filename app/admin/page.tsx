@@ -99,6 +99,7 @@ export default function Admin() {
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser()
+
       if (!data.user) {
         router.push('/')
         return
@@ -125,7 +126,7 @@ export default function Admin() {
     }
 
     getUser()
-  }, [])
+  }, [router])
 
   const fetchAll = async () => {
     const { data: trailsData } = await supabase
@@ -230,6 +231,30 @@ export default function Admin() {
     fetchAll()
   }
 
+  const openTrailEdit = async (trail: any) => {
+    const { data, error } = await supabase
+      .from('trails')
+      .select('*')
+      .eq('id', trail.id)
+      .single()
+
+    const fullTrail = error || !data ? trail : data
+
+    setEditingTrail({
+      ...trail,
+      ...fullTrail,
+      gpx_color: fullTrail.gpx_color || trail.gpx_color || DEFAULT_TRAIL_COLOR,
+    })
+
+    setEditRoutePoints(
+      fullTrail.lat && fullTrail.lng
+        ? [[parseFloat(fullTrail.lat), parseFloat(fullTrail.lng)]]
+        : []
+    )
+
+    setGpxPreviewKey((k) => k + 1)
+  }
+
   const saveTrailEdit = async () => {
     const lat = editRoutePoints.length > 0 ? editRoutePoints[0][0] : parseFloat(editingTrail.lat)
     const lng = editRoutePoints.length > 0 ? editRoutePoints[0][1] : parseFloat(editingTrail.lng)
@@ -241,7 +266,7 @@ export default function Admin() {
         description: editingTrail.description,
         trail_type: editingTrail.trail_type,
         skill_level: editingTrail.skill_level,
-        length_km: parseFloat(editingTrail.length_km),
+        length_km: editingTrail.length_km ? parseFloat(editingTrail.length_km) : null,
         location_name: editingTrail.location_name,
         lat,
         lng,
@@ -1024,13 +1049,7 @@ export default function Admin() {
                             )}
 
                             <button
-                              onClick={() => {
-                                setEditingTrail({ ...trail, gpx_color: trail.gpx_color || DEFAULT_TRAIL_COLOR })
-                                setEditRoutePoints(
-                                  trail.lat && trail.lng ? [[parseFloat(trail.lat), parseFloat(trail.lng)]] : []
-                                )
-                                setGpxPreviewKey((k) => k + 1)
-                              }}
+                              onClick={() => openTrailEdit(trail)}
                               className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700 transition"
                             >
                               ✏️ Upravit
