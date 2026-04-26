@@ -79,6 +79,10 @@ const colorOptions = [
   { label: 'Bílá', value: '#ffffff' },
 ]
 
+type AdminTab = 'trails' | 'reviews' | 'articles' | 'members' | 'photos'
+type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected' | 'deleted'
+type TrailTypeFilter = 'all' | 'singltrek' | 'pumptrack' | 'skatepark' | 'bikepark' | 'crosscountry'
+
 export default function Admin() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -89,8 +93,10 @@ export default function Admin() {
   const [users, setUsers] = useState<any[]>([])
   const [newMembers, setNewMembers] = useState<any[]>([])
   const [photos, setPhotos] = useState<any[]>([])
-  const [tab, setTab] = useState<'trails' | 'reviews' | 'articles' | 'members' | 'photos'>('trails')
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'deleted'>('pending')
+  const [tab, setTab] = useState<AdminTab>('trails')
+  const [filter, setFilter] = useState<StatusFilter>('pending')
+  const [trailTypeFilter, setTrailTypeFilter] = useState<TrailTypeFilter>('all')
+  const [trailSearch, setTrailSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [editingTrail, setEditingTrail] = useState<any>(null)
   const [editRoutePoints, setEditRoutePoints] = useState<[number, number][]>([])
@@ -292,10 +298,44 @@ export default function Admin() {
     profile?.role === 'admin' ||
     profile?.role === 'superadmin'
 
-  const filteredTrails =
+  const baseFilteredTrails =
     filter === 'all'
       ? trails.filter((t) => t.status !== 'deleted')
       : trails.filter((t) => t.status === filter)
+
+  const normalizedTrailSearch = trailSearch.trim().toLowerCase()
+
+  const filteredTrails = baseFilteredTrails.filter((trail) => {
+    if (trailTypeFilter !== 'all' && trail.trail_type !== trailTypeFilter) {
+      return false
+    }
+
+    if (!normalizedTrailSearch) {
+      return true
+    }
+
+    const searchableText = [
+      trail.name,
+      trail.description,
+      trail.location_name,
+      trail.region,
+      trail.trail_type,
+      trailTypeLabel[trail.trail_type],
+      trail.skill_level,
+      trail.difficulty,
+      skillLevelLabel[trail.skill_level || trail.difficulty],
+      trail.status,
+      statusLabel[trail.status],
+      trail.created_by_username,
+      trail.approved_by_username,
+      trail.updated_by_username,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+
+    return searchableText.includes(normalizedTrailSearch)
+  })
 
   const pendingArticles = articles.filter((a) => a.status === 'pending')
 
@@ -638,7 +678,7 @@ export default function Admin() {
         {/* Tab: Traily */}
         {tab === 'trails' && (
           <>
-            <div className="flex gap-2 mb-6 flex-wrap">
+            <div className="flex gap-2 mb-4 flex-wrap">
               {(['pending', 'all', 'approved', 'rejected', 'deleted'] as const).map((f) => (
                 <button
                   key={f}
@@ -660,8 +700,90 @@ export default function Admin() {
               ))}
             </div>
 
+            {/* Vyhledávání a typový filtr trailů */}
+            <div className="bg-gray-900 rounded-2xl p-4 mb-6 flex flex-col gap-4">
+              <div>
+                <label className="text-gray-400 text-xs mb-1 block">
+                  Vyhledávání v trailech
+                </label>
+
+                <div className="flex gap-2">
+                  <input
+                    value={trailSearch}
+                    onChange={(e) => setTrailSearch(e.target.value)}
+                    placeholder="Hledat podle názvu, lokality, kraje, typu, obtížnosti..."
+                    className="flex-1 bg-gray-800 text-white rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                  />
+
+                  {trailSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setTrailSearch('')}
+                      className="bg-gray-800 text-gray-300 px-3 py-2.5 rounded-xl text-sm hover:bg-gray-700 transition"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-xs mb-2 block">
+                  Typ místa
+                </label>
+
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    { value: 'all', label: 'Vše' },
+                    { value: 'singltrek', label: '🚵 Singltrek' },
+                    { value: 'pumptrack', label: '🔁 Pumptrack' },
+                    { value: 'skatepark', label: '🛹 Skatepark' },
+                    { value: 'bikepark', label: '🏔️ Bikepark' },
+                    { value: 'crosscountry', label: '🛤️ Cross-country' },
+                  ].map((type) => (
+                    <button
+                      key={type.value}
+                      type="button"
+                      onClick={() => setTrailTypeFilter(type.value as TrailTypeFilter)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                        trailTypeFilter === type.value
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                      }`}
+                    >
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-gray-500 text-xs">
+                  Zobrazeno: <span className="text-orange-400 font-semibold">{filteredTrails.length}</span> z{' '}
+                  <span className="text-gray-300">{baseFilteredTrails.length}</span> položek v aktuálním stavu.
+                </p>
+
+                {(trailSearch || trailTypeFilter !== 'all') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTrailSearch('')
+                      setTrailTypeFilter('all')
+                    }}
+                    className="text-xs text-red-400 hover:text-red-300 transition"
+                  >
+                    Vymazat hledání a filtr typu
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="flex flex-col gap-4">
-              {filteredTrails.length === 0 && <p className="text-gray-400">Žádné traily.</p>}
+              {filteredTrails.length === 0 && (
+                <p className="text-gray-400">
+                  Žádné traily neodpovídají aktuálnímu vyhledávání nebo filtru.
+                </p>
+              )}
 
               {filteredTrails.map((trail) => (
                 <div
