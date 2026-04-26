@@ -12,42 +12,34 @@ import { createPortal } from 'react-dom'
 const NAVBAR_HEIGHT_PX = 72
 const MAP_OVERLAY_Z_INDEX = 999999
 const CONTROL_Z_INDEX = 1000000
+const DEFAULT_GPX_COLOR = '#f97316'
+
+const getGpxTrailColor = (trail: any) => {
+  return (
+    trail.gpx_color ||
+    trail.gpx_track_color ||
+    trail.route_color ||
+    trail.trail_color ||
+    trail.map_color ||
+    trail.color ||
+    DEFAULT_GPX_COLOR
+  )
+}
 
 const createTrailIcon = (type: string, isOfficial: boolean) => {
   const color = isOfficial ? '#22c55e' : '#6b7280'
 
   const icons: { [key: string]: string } = {
-    singltrek: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
-      <text x="18" y="24" text-anchor="middle" font-size="18">🚵</text>
-    </svg>`,
-
-    pumptrack: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
-      <text x="18" y="24" text-anchor="middle" font-size="18">🔁</text>
-    </svg>`,
-
-    skatepark: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
-      <text x="18" y="24" text-anchor="middle" font-size="18">🛹</text>
-    </svg>`,
-
-    bikepark: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
-      <text x="18" y="24" text-anchor="middle" font-size="18">🏔️</text>
-    </svg>`,
-
-    crosscountry: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
-      <text x="18" y="24" text-anchor="middle" font-size="18">🛤️</text>
-    </svg>`,
+    singltrek: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/><text x="18" y="24" text-anchor="middle" font-size="18">🚵</text></svg>`,
+    pumptrack: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/><text x="18" y="24" text-anchor="middle" font-size="18">🔁</text></svg>`,
+    skatepark: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/><text x="18" y="24" text-anchor="middle" font-size="18">🛹</text></svg>`,
+    bikepark: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/><text x="18" y="24" text-anchor="middle" font-size="18">🏔️</text></svg>`,
+    crosscountry: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/><text x="18" y="24" text-anchor="middle" font-size="18">🛤️</text></svg>`,
   }
-
-  const svg = icons[type] || icons.singltrek
 
   return L.divIcon({
     className: '',
-    html: svg,
+    html: icons[type] || icons.singltrek,
     iconSize: [36, 36],
     iconAnchor: [18, 18],
     popupAnchor: [0, -20],
@@ -56,7 +48,6 @@ const createTrailIcon = (type: string, isOfficial: boolean) => {
 
 const createClusterIcon = (cluster: any) => {
   const count = cluster.getChildCount()
-
   let size = 44
   let fontSize = 15
 
@@ -138,6 +129,156 @@ const escapeHtml = (value: any) => {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;')
+}
+
+const parseGpxToLatLngs = (gpxText: string): [number, number][] => {
+  try {
+    const parser = new DOMParser()
+    const xml = parser.parseFromString(gpxText, 'application/xml')
+    const points = Array.from(xml.querySelectorAll('trkpt, rtept'))
+
+    return points
+      .map((point) => {
+        const lat = parseFloat(point.getAttribute('lat') || '')
+        const lng = parseFloat(point.getAttribute('lon') || '')
+
+        if (Number.isNaN(lat) || Number.isNaN(lng)) return null
+
+        return [lat, lng] as [number, number]
+      })
+      .filter(Boolean) as [number, number][]
+  } catch {
+    return []
+  }
+}
+
+const getTrailLatLngs = async (trail: any): Promise<[number, number][]> => {
+  if (trail.gpx_data || trail.gpx) {
+    const points = parseGpxToLatLngs(trail.gpx_data || trail.gpx)
+    if (points.length > 1) return points
+  }
+
+  const gpxUrl =
+    trail.gpx_url ||
+    trail.gpx_file_url ||
+    trail.gpx_file ||
+    trail.gpx_path ||
+    trail.gpx_public_url
+
+  if (gpxUrl) {
+    try {
+      const response = await fetch(gpxUrl)
+      const text = await response.text()
+      const points = parseGpxToLatLngs(text)
+
+      if (points.length > 1) return points
+    } catch {
+      return []
+    }
+  }
+
+  return []
+}
+
+const buildTrailPopupHtml = (trail: any) => {
+  const trailName = escapeHtml(trail.name)
+  const locationName = escapeHtml(trail.location_name)
+  const typeLabel = trailTypeLabel[trail.trail_type] || '🚵 Singltrek'
+  const skillLabel = skillLevelLabel[trail.skill_level || trail.difficulty] || '🟢 Začátečník'
+  const length = trail.length_km ? `${escapeHtml(trail.length_km)} km` : 'Délka neuvedena'
+
+  return `
+    <div style="min-width: 180px;">
+      <h3 style="font-weight: bold; margin: 0 0 4px;">${trailName}</h3>
+      <p style="color: #888; font-size: 12px; margin: 0 0 4px;">${locationName}</p>
+      <p style="font-size: 12px; margin: 0 0 4px;">${typeLabel}</p>
+      <p style="font-size: 12px; margin: 0 0 4px;">${skillLabel} — ${length}</p>
+
+      ${
+        !trail.is_official
+          ? '<p style="font-size: 11px; color: #aaa; margin: 2px 0;">☠️ Neoficiální trail</p>'
+          : ''
+      }
+
+      <a
+        href="/trail/${trail.id}"
+        style="
+          display: inline-block;
+          background: #f97316;
+          color: white;
+          padding: 5px 9px;
+          border-radius: 6px;
+          margin-top: 8px;
+          cursor: pointer;
+          border: none;
+          text-decoration: none;
+          font-size: 12px;
+          font-weight: 700;
+        "
+      >
+        Zobrazit detail
+      </a>
+    </div>
+  `
+}
+
+function TrailGpxLines({ trails }: { trails: any[] }) {
+  const map = useMap()
+
+  useEffect(() => {
+    let cancelled = false
+    const group = L.layerGroup()
+
+    const drawTrails = async () => {
+      for (const trail of trails) {
+        const latLngs = await getTrailLatLngs(trail)
+
+        if (cancelled) return
+        if (latLngs.length < 2) continue
+
+        const color = getGpxTrailColor(trail)
+
+        const line = L.polyline(latLngs, {
+          color,
+          weight: 5,
+          opacity: 0.95,
+          lineCap: 'round',
+          lineJoin: 'round',
+        })
+
+        line.bindPopup(buildTrailPopupHtml(trail))
+
+        line.on('mouseover', () => {
+          line.setStyle({
+            weight: 7,
+            opacity: 1,
+          })
+        })
+
+        line.on('mouseout', () => {
+          line.setStyle({
+            weight: 5,
+            opacity: 0.95,
+          })
+        })
+
+        group.addLayer(line)
+      }
+
+      if (!cancelled) {
+        group.addTo(map)
+      }
+    }
+
+    drawTrails()
+
+    return () => {
+      cancelled = true
+      group.remove()
+    }
+  }, [map, trails])
+
+  return null
 }
 
 function ZoomControl({ fullscreen }: { fullscreen: boolean }) {
@@ -267,46 +408,7 @@ function TrailMarkerCluster({ trails }: { trails: any[] }) {
         icon: createTrailIcon(trail.trail_type || 'singltrek', trail.is_official),
       })
 
-      const trailName = escapeHtml(trail.name)
-      const locationName = escapeHtml(trail.location_name)
-      const typeLabel = trailTypeLabel[trail.trail_type] || '🚵 Singltrek'
-      const skillLabel = skillLevelLabel[trail.skill_level || trail.difficulty] || '🟢 Začátečník'
-      const length = trail.length_km ? `${escapeHtml(trail.length_km)} km` : 'Délka neuvedena'
-
-      marker.bindPopup(`
-        <div style="min-width: 180px;">
-          <h3 style="font-weight: bold; margin: 0 0 4px;">${trailName}</h3>
-          <p style="color: #888; font-size: 12px; margin: 0 0 4px;">${locationName}</p>
-          <p style="font-size: 12px; margin: 0 0 4px;">${typeLabel}</p>
-          <p style="font-size: 12px; margin: 0 0 4px;">${skillLabel} — ${length}</p>
-
-          ${
-            !trail.is_official
-              ? '<p style="font-size: 11px; color: #aaa; margin: 2px 0;">☠️ Neoficiální trail</p>'
-              : ''
-          }
-
-          <a
-            href="/trail/${trail.id}"
-            style="
-              display: inline-block;
-              background: #f97316;
-              color: white;
-              padding: 5px 9px;
-              border-radius: 6px;
-              margin-top: 8px;
-              cursor: pointer;
-              border: none;
-              text-decoration: none;
-              font-size: 12px;
-              font-weight: 700;
-            "
-          >
-            Zobrazit detail
-          </a>
-        </div>
-      `)
-
+      marker.bindPopup(buildTrailPopupHtml(trail))
       clusterGroup.addLayer(marker)
     })
 
@@ -413,6 +515,7 @@ export default function Map({ trails }: { trails: any[] }) {
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
+        <TrailGpxLines trails={trails} />
         <TrailMarkerCluster trails={trails} />
         <UserLocationMarker coords={userLocation} />
 
@@ -421,7 +524,6 @@ export default function Map({ trails }: { trails: any[] }) {
         <MapResizeWatcher fullscreen={fullscreen} />
       </MapContainer>
 
-      {/* Tlačítko celá obrazovka / minimalizace */}
       <button
         type="button"
         onClick={() => setFullscreen((prev) => !prev)}
@@ -452,7 +554,6 @@ export default function Map({ trails }: { trails: any[] }) {
         {fullscreen ? '✕' : '⛶'}
       </button>
 
-      {/* Sbalitelná legenda */}
       <div
         style={{
           position: 'absolute',
@@ -517,6 +618,7 @@ export default function Map({ trails }: { trails: any[] }) {
               }}
             >
               <p style={{ fontWeight: 'bold', marginBottom: '2px', color: '#f97316' }}>Mapa</p>
+              <p>Barevná čára = GPX trasa trailu</p>
               <p>Oranžové číslo = více trailů v oblasti</p>
               {fullscreen && <p>✕ = zavřít celou obrazovku</p>}
             </div>
@@ -524,7 +626,6 @@ export default function Map({ trails }: { trails: any[] }) {
         )}
       </div>
 
-      {/* Moje poloha */}
       <button
         type="button"
         onTouchEnd={(e) => {
