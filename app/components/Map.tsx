@@ -142,7 +142,7 @@ function ZoomControl() {
     <div
       style={{
         position: 'absolute',
-        bottom: '128px',
+        bottom: '190px',
         left: '10px',
         zIndex: 1000,
         display: 'flex',
@@ -392,7 +392,6 @@ export default function Map({ trails }: { trails: any[] }) {
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
         <TrailMarkerCluster trails={trails} />
-
         <UserLocationMarker coords={userLocation} />
 
         <ZoomControl />
@@ -407,19 +406,19 @@ export default function Map({ trails }: { trails: any[] }) {
         title={fullscreen ? 'Zavřít celou obrazovku' : 'Zobrazit na celou obrazovku'}
         style={{
           position: 'absolute',
-          top: '10px',
+          bottom: fullscreen ? '84px' : '136px',
           left: '10px',
           zIndex: 9999,
-          width: fullscreen ? '42px' : '44px',
-          height: fullscreen ? '42px' : '44px',
-          borderRadius: '12px',
+          width: fullscreen ? '42px' : '46px',
+          height: fullscreen ? '42px' : '46px',
+          borderRadius: fullscreen ? '12px' : '9999px',
           background: fullscreen ? '#111827' : 'rgba(0,0,0,0.78)',
           color: 'white',
-          border: '2px solid rgba(255,255,255,0.85)',
+          border: '3px solid white',
           fontSize: fullscreen ? '22px' : '20px',
           fontWeight: 900,
           cursor: 'pointer',
-          boxShadow: '0 3px 12px rgba(0,0,0,0.35)',
+          boxShadow: '0 3px 12px rgba(0,0,0,0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -501,6 +500,7 @@ export default function Map({ trails }: { trails: any[] }) {
         )}
       </div>
 
+      {/* Moje poloha */}
       <button
         type="button"
         onTouchEnd={(e) => {
@@ -518,13 +518,13 @@ export default function Map({ trails }: { trails: any[] }) {
           width: '46px',
           height: '46px',
           borderRadius: '9999px',
-          background: locating ? '#555' : '#f97316',
-          color: 'white',
-          border: '3px solid white',
+          background: locating ? '#e5e7eb' : 'white',
+          color: locating ? '#6b7280' : '#111827',
+          border: '2px solid rgba(0,0,0,0.2)',
           fontWeight: 'bold',
           fontSize: '20px',
           cursor: locating ? 'not-allowed' : 'pointer',
-          boxShadow: '0 3px 12px rgba(0,0,0,0.4)',
+          boxShadow: '0 3px 12px rgba(0,0,0,0.25)',
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
           display: 'flex',
