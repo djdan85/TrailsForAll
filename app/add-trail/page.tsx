@@ -74,6 +74,32 @@ export default function AddTrail() {
     getUser()
   }, [router])
 
+  const fetchRegion = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=cs`
+      )
+
+      if (!response.ok) return ''
+
+      const data = await response.json()
+      const address = data?.address || {}
+
+      return (
+        address.state ||
+        address.region ||
+        address.county ||
+        address.city ||
+        address.town ||
+        address.village ||
+        ''
+      )
+    } catch (error) {
+      console.error('Chyba při zjišťování kraje:', error)
+      return ''
+    }
+  }
+
   const handleChange = (e: any) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
@@ -87,16 +113,21 @@ export default function AddTrail() {
     }
   }
 
-  const handleGpxUpload = (url: string, points: [number, number][]) => {
+  const handleGpxUpload = async (url: string, points: [number, number][]) => {
     setGpxUrl(url)
     setGpxPoints(points)
 
     if (points.length > 0) {
-      setRoutePoints([points[0]])
+      const startPoint = points[0]
+      setRoutePoints([startPoint])
+
+      const detectedRegion = await fetchRegion(startPoint[0], startPoint[1])
+      setRegion(detectedRegion)
     } else {
       setRoutePoints([])
       setGpxPoints([])
       setGpxUrl('')
+      setRegion('')
     }
 
     setPreviewKey((k) => k + 1)
@@ -120,6 +151,13 @@ export default function AddTrail() {
     const primaryPhoto = photos.find((p) => p.is_primary) || photos[0] || null
     const finalGpxColor = isBikepark ? gpxColor : DEFAULT_TRAIL_COLOR
 
+    let finalRegion = region
+
+    if (!finalRegion && startPoint) {
+      finalRegion = await fetchRegion(startPoint[0], startPoint[1])
+      if (finalRegion) setRegion(finalRegion)
+    }
+
     const { data: trailData, error: trailError } = await supabase
       .from('trails')
       .insert({
@@ -137,7 +175,7 @@ export default function AddTrail() {
         maps_url: form.maps_url || null,
         website_url: form.website_url || null,
         is_official: form.is_official,
-        region: region || null,
+        region: finalRegion || null,
         created_by: user.id,
         status: 'pending',
       })
@@ -400,6 +438,7 @@ export default function AddTrail() {
                   setGpxUrl('')
                   setGpxPoints([])
                   setRoutePoints([])
+                  setRegion('')
                   setPreviewKey((k) => k + 1)
                 }}
                 className="mt-2 text-red-400 text-xs hover:text-red-300 transition"
