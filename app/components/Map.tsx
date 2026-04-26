@@ -8,7 +8,8 @@ import L from 'leaflet'
 import 'leaflet.markercluster'
 import { useEffect, useState } from 'react'
 
-const CONTROL_Z_INDEX = 2147483647
+const NAVBAR_HEIGHT_PX = 72
+const CONTROL_Z_INDEX = 10000
 
 const createTrailIcon = (type: string, isOfficial: boolean) => {
   const color = isOfficial ? '#22c55e' : '#6b7280'
@@ -143,8 +144,8 @@ function ZoomControl({ fullscreen }: { fullscreen: boolean }) {
   return (
     <div
       style={{
-        position: fullscreen ? 'fixed' : 'absolute',
-        bottom: fullscreen ? '150px' : '190px',
+        position: 'absolute',
+        bottom: fullscreen ? '136px' : '190px',
         left: '10px',
         zIndex: CONTROL_Z_INDEX,
         display: 'flex',
@@ -327,14 +328,10 @@ export default function Map({ trails }: { trails: any[] }) {
     if (!fullscreen) return
 
     const originalOverflow = document.body.style.overflow
-    const originalTouchAction = document.body.style.touchAction
-
     document.body.style.overflow = 'hidden'
-    document.body.style.touchAction = 'none'
 
     return () => {
       document.body.style.overflow = originalOverflow
-      document.body.style.touchAction = originalTouchAction
     }
   }, [fullscreen])
 
@@ -385,12 +382,16 @@ export default function Map({ trails }: { trails: any[] }) {
     <div
       style={{
         position: fullscreen ? 'fixed' : 'relative',
-        inset: fullscreen ? 0 : undefined,
-        height: fullscreen ? '100dvh' : '100%',
+        top: fullscreen ? `${NAVBAR_HEIGHT_PX}px` : undefined,
+        left: fullscreen ? 0 : undefined,
+        right: fullscreen ? 0 : undefined,
+        bottom: fullscreen ? 0 : undefined,
+        height: fullscreen ? `calc(100dvh - ${NAVBAR_HEIGHT_PX}px)` : '100%',
         width: fullscreen ? '100vw' : '100%',
-        zIndex: fullscreen ? 2147483000 : 'auto',
+        zIndex: fullscreen ? 9990 : 'auto',
         background: '#020617',
         overflow: 'hidden',
+        isolation: 'isolate',
       }}
     >
       <MapContainer
@@ -419,13 +420,13 @@ export default function Map({ trails }: { trails: any[] }) {
         onClick={() => setFullscreen((prev) => !prev)}
         title={fullscreen ? 'Zavřít celou obrazovku' : 'Zobrazit na celou obrazovku'}
         style={{
-          position: fullscreen ? 'fixed' : 'absolute',
-          bottom: fullscreen ? '84px' : '136px',
+          position: 'absolute',
+          bottom: fullscreen ? '78px' : '136px',
           left: '10px',
           zIndex: CONTROL_Z_INDEX,
-          width: fullscreen ? '42px' : '46px',
-          height: fullscreen ? '42px' : '46px',
-          borderRadius: fullscreen ? '12px' : '9999px',
+          width: '46px',
+          height: '46px',
+          borderRadius: '9999px',
           background: fullscreen ? '#111827' : 'rgba(0,0,0,0.78)',
           color: 'white',
           border: '3px solid white',
@@ -447,7 +448,7 @@ export default function Map({ trails }: { trails: any[] }) {
       {/* Sbalitelná legenda */}
       <div
         style={{
-          position: fullscreen ? 'fixed' : 'absolute',
+          position: 'absolute',
           top: '10px',
           right: '10px',
           zIndex: CONTROL_Z_INDEX,
@@ -527,8 +528,8 @@ export default function Map({ trails }: { trails: any[] }) {
         disabled={locating}
         title="Moje poloha"
         style={{
-          position: fullscreen ? 'fixed' : 'absolute',
-          bottom: fullscreen ? '24px' : '78px',
+          position: 'absolute',
+          bottom: fullscreen ? '20px' : '78px',
           left: '10px',
           zIndex: CONTROL_Z_INDEX,
           width: '46px',
