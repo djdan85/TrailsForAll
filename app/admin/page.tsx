@@ -833,27 +833,29 @@ export default function Admin() {
                         </p>
                       </div>
 
-                      {/* Poloha */}
-                      <div>
-                        <label className="text-gray-400 text-xs mb-1 block">Poloha startu — klikni na mapu</label>
+                      {/* Poloha se zobrazuje jen pokud trail nemá GPX */}
+                      {!editingTrail.gpx_url && (
+                        <div>
+                          <label className="text-gray-400 text-xs mb-1 block">Poloha startu — klikni na mapu</label>
 
-                        <RouteMap
-                          points={
-                            editRoutePoints.length > 0
-                              ? editRoutePoints
-                              : editingTrail.lat && editingTrail.lng
-                                ? [[parseFloat(editingTrail.lat), parseFloat(editingTrail.lng)]]
-                                : []
-                          }
-                          onChange={setEditRoutePoints}
-                        />
+                          <RouteMap
+                            points={
+                              editRoutePoints.length > 0
+                                ? editRoutePoints
+                                : editingTrail.lat && editingTrail.lng
+                                  ? [[parseFloat(editingTrail.lat), parseFloat(editingTrail.lng)]]
+                                  : []
+                            }
+                            onChange={setEditRoutePoints}
+                          />
 
-                        {editRoutePoints.length > 0 && (
-                          <p className="text-gray-600 text-xs mt-1">
-                            📍 {editRoutePoints[0][0].toFixed(5)}, {editRoutePoints[0][1].toFixed(5)}
-                          </p>
-                        )}
-                      </div>
+                          {editRoutePoints.length > 0 && (
+                            <p className="text-gray-600 text-xs mt-1">
+                              📍 {editRoutePoints[0][0].toFixed(5)}, {editRoutePoints[0][1].toFixed(5)}
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {/* GPX preview — jen když má trail GPX */}
                       {editingTrail.gpx_url && (
@@ -871,6 +873,10 @@ export default function Admin() {
                               gpxColor={editingTrail.gpx_color || DEFAULT_TRAIL_COLOR}
                             />
                           </div>
+
+                          <p className="text-gray-600 text-xs mt-1">
+                            Start trasy je převzatý z GPX souboru. Ruční výběr polohy se proto nezobrazuje.
+                          </p>
                         </div>
                       )}
 
