@@ -7,9 +7,11 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import L from 'leaflet'
 import 'leaflet.markercluster'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 const NAVBAR_HEIGHT_PX = 72
-const CONTROL_Z_INDEX = 10000
+const MAP_OVERLAY_Z_INDEX = 999999
+const CONTROL_Z_INDEX = 1000000
 
 const createTrailIcon = (type: string, isOfficial: boolean) => {
   const color = isOfficial ? '#22c55e' : '#6b7280'
@@ -323,6 +325,11 @@ export default function Map({ trails }: { trails: any[] }) {
   const [locating, setLocating] = useState(false)
   const [legendOpen, setLegendOpen] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!fullscreen) return
@@ -378,7 +385,7 @@ export default function Map({ trails }: { trails: any[] }) {
     )
   }
 
-  return (
+  const mapContent = (
     <div
       style={{
         position: fullscreen ? 'fixed' : 'relative',
@@ -388,7 +395,7 @@ export default function Map({ trails }: { trails: any[] }) {
         bottom: fullscreen ? 0 : undefined,
         height: fullscreen ? `calc(100dvh - ${NAVBAR_HEIGHT_PX}px)` : '100%',
         width: fullscreen ? '100vw' : '100%',
-        zIndex: fullscreen ? 9990 : 'auto',
+        zIndex: fullscreen ? MAP_OVERLAY_Z_INDEX : 'auto',
         background: '#020617',
         overflow: 'hidden',
         isolation: 'isolate',
@@ -554,4 +561,15 @@ export default function Map({ trails }: { trails: any[] }) {
       </button>
     </div>
   )
+
+  if (fullscreen && mounted) {
+    return (
+      <>
+        <div style={{ height: '100%', width: '100%' }} />
+        {createPortal(mapContent, document.body)}
+      </>
+    )
+  }
+
+  return mapContent
 }
