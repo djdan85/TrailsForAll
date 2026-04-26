@@ -1,12 +1,12 @@
 'use client'
 
-import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import L from 'leaflet'
 import 'leaflet.markercluster'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 const createTrailIcon = (type: string, isOfficial: boolean) => {
   const color = isOfficial ? '#22c55e' : '#6b7280'
@@ -16,18 +16,22 @@ const createTrailIcon = (type: string, isOfficial: boolean) => {
       <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
       <text x="18" y="24" text-anchor="middle" font-size="18">🚵</text>
     </svg>`,
+
     pumptrack: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
       <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
       <text x="18" y="24" text-anchor="middle" font-size="18">🔁</text>
     </svg>`,
+
     skatepark: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
       <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
       <text x="18" y="24" text-anchor="middle" font-size="18">🛹</text>
     </svg>`,
+
     bikepark: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
       <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
       <text x="18" y="24" text-anchor="middle" font-size="18">🏔️</text>
     </svg>`,
+
     crosscountry: `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
       <circle cx="18" cy="18" r="17" fill="${color}" stroke="white" stroke-width="2"/>
       <text x="18" y="24" text-anchor="middle" font-size="18">🛤️</text>
@@ -48,11 +52,25 @@ const createTrailIcon = (type: string, isOfficial: boolean) => {
 const createClusterIcon = (cluster: any) => {
   const count = cluster.getChildCount()
 
+  let size = 44
+  let fontSize = 15
+
+  if (count >= 10) {
+    size = 50
+    fontSize = 16
+  }
+
+  if (count >= 50) {
+    size = 58
+    fontSize = 17
+  }
+
   return L.divIcon({
+    className: '',
     html: `
       <div style="
-        width: 44px;
-        height: 44px;
+        width: ${size}px;
+        height: ${size}px;
         border-radius: 9999px;
         background: #f97316;
         color: white;
@@ -60,26 +78,33 @@ const createClusterIcon = (cluster: any) => {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 800;
-        font-size: 15px;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+        font-weight: 900;
+        font-size: ${fontSize}px;
+        box-shadow: 0 5px 16px rgba(0,0,0,0.4);
       ">
         ${count}
       </div>
     `,
-    className: '',
-    iconSize: [44, 44],
-    iconAnchor: [22, 22],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   })
 }
 
-const locationIcon = L.icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-  iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
+const locationIcon = L.divIcon({
+  className: '',
+  html: `
+    <div style="
+      width: 26px;
+      height: 26px;
+      border-radius: 9999px;
+      background: #ef4444;
+      border: 3px solid white;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+    "></div>
+  `,
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
+  popupAnchor: [0, -13],
 })
 
 const trailTypeLabel: { [key: string]: string } = {
@@ -101,33 +126,6 @@ const skillLevelLabel: { [key: string]: string } = {
   expert: '⚫ Expert',
 }
 
-const parseGpx = (text: string): [number, number][] => {
-  const parser = new DOMParser()
-  const xml = parser.parseFromString(text, 'application/xml')
-  const points: [number, number][] = []
-
-  const selectors = ['trkpt', 'rtept', 'wpt']
-
-  for (const selector of selectors) {
-    const nodes = xml.querySelectorAll(selector)
-
-    if (nodes.length > 0) {
-      nodes.forEach((pt) => {
-        const lat = parseFloat(pt.getAttribute('lat') || '')
-        const lon = parseFloat(pt.getAttribute('lon') || '')
-
-        if (!isNaN(lat) && !isNaN(lon)) {
-          points.push([lat, lon])
-        }
-      })
-
-      if (points.length > 0) break
-    }
-  }
-
-  return points
-}
-
 const escapeHtml = (value: any) => {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -144,7 +142,7 @@ function ZoomControl() {
     <div
       style={{
         position: 'absolute',
-        bottom: '140px',
+        bottom: '128px',
         left: '10px',
         zIndex: 1000,
         display: 'flex',
@@ -153,6 +151,7 @@ function ZoomControl() {
       }}
     >
       <button
+        type="button"
         onClick={() => map.zoomIn()}
         style={{
           background: 'white',
@@ -170,6 +169,7 @@ function ZoomControl() {
       </button>
 
       <button
+        type="button"
         onClick={() => map.zoomOut()}
         style={{
           background: 'white',
@@ -220,21 +220,16 @@ function UserLocationMarker({ coords }: { coords: [number, number] | null }) {
   return null
 }
 
-function TrailMarkerCluster({
-  trails,
-  gpxRoutes,
-}: {
-  trails: any[]
-  gpxRoutes: { [trailId: string]: [number, number][] }
-}) {
+function TrailMarkerCluster({ trails }: { trails: any[] }) {
   const map = useMap()
 
   useEffect(() => {
     const clusterGroup = L.markerClusterGroup({
       showCoverageOnHover: false,
       spiderfyOnMaxZoom: true,
-      disableClusteringAtZoom: 15,
-      maxClusterRadius: 55,
+      zoomToBoundsOnClick: true,
+      disableClusteringAtZoom: 16,
+      maxClusterRadius: 90,
       iconCreateFunction: createClusterIcon,
     })
 
@@ -255,12 +250,10 @@ function TrailMarkerCluster({
       const typeLabel = trailTypeLabel[trail.trail_type] || '🚵 Singltrek'
       const skillLabel = skillLevelLabel[trail.skill_level || trail.difficulty] || '🟢 Začátečník'
       const length = trail.length_km ? `${escapeHtml(trail.length_km)} km` : 'Délka neuvedena'
-      const gpxLoaded = Boolean(gpxRoutes[trail.id])
-      const gpxColor = trail.gpx_color || '#f97316'
 
       marker.bindPopup(`
         <div style="min-width: 180px;">
-          <h3 style="font-weight: bold; margin-bottom: 4px;">${trailName}</h3>
+          <h3 style="font-weight: bold; margin: 0 0 4px;">${trailName}</h3>
           <p style="color: #888; font-size: 12px; margin: 0 0 4px;">${locationName}</p>
           <p style="font-size: 12px; margin: 0 0 4px;">${typeLabel}</p>
           <p style="font-size: 12px; margin: 0 0 4px;">${skillLabel} — ${length}</p>
@@ -268,12 +261,6 @@ function TrailMarkerCluster({
           ${
             !trail.is_official
               ? '<p style="font-size: 11px; color: #aaa; margin: 2px 0;">☠️ Neoficiální trail</p>'
-              : ''
-          }
-
-          ${
-            gpxLoaded
-              ? `<p style="font-size: 11px; color: ${gpxColor}; margin: 2px 0;">● GPX trasa načtena</p>`
               : ''
           }
 
@@ -306,7 +293,7 @@ function TrailMarkerCluster({
     return () => {
       map.removeLayer(clusterGroup)
     }
-  }, [map, trails, gpxRoutes])
+  }, [map, trails])
 
   return null
 }
@@ -314,24 +301,6 @@ function TrailMarkerCluster({
 export default function Map({ trails }: { trails: any[] }) {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
   const [locating, setLocating] = useState(false)
-  const [gpxRoutes, setGpxRoutes] = useState<{ [trailId: string]: [number, number][] }>({})
-
-  useEffect(() => {
-    trails.forEach((trail) => {
-      if (trail.gpx_url && !gpxRoutes[trail.id]) {
-        fetch(trail.gpx_url)
-          .then((res) => res.text())
-          .then((text) => {
-            const points = parseGpx(text)
-
-            if (points.length > 0) {
-              setGpxRoutes((prev) => ({ ...prev, [trail.id]: points }))
-            }
-          })
-          .catch(() => {})
-      }
-    })
-  }, [trails, gpxRoutes])
 
   const handleLocate = () => {
     if (!navigator.geolocation) {
@@ -372,23 +341,7 @@ export default function Map({ trails }: { trails: any[] }) {
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        {/* GPX trasy */}
-        {trails.map((trail) =>
-          gpxRoutes[trail.id] ? (
-            <Polyline
-              key={`gpx-${trail.id}`}
-              positions={gpxRoutes[trail.id]}
-              pathOptions={{
-                color: trail.gpx_color || (trail.is_official ? '#f97316' : '#6b7280'),
-                weight: 3,
-                opacity: 0.9,
-              }}
-            />
-          ) : null
-        )}
-
-        {/* Shlukované markery trailů */}
-        <TrailMarkerCluster trails={trails} gpxRoutes={gpxRoutes} />
+        <TrailMarkerCluster trails={trails} />
 
         <UserLocationMarker coords={userLocation} />
 
@@ -405,12 +358,13 @@ export default function Map({ trails }: { trails: any[] }) {
           zIndex: 1000,
           background: 'rgba(0,0,0,0.75)',
           borderRadius: '10px',
-          padding: '8px 12px',
-          fontSize: '12px',
+          padding: '8px 10px',
+          fontSize: '11px',
           color: 'white',
           display: 'flex',
           flexDirection: 'column',
-          gap: '4px',
+          gap: '3px',
+          maxWidth: '145px',
         }}
       >
         <p style={{ fontWeight: 'bold', marginBottom: '2px', color: '#f97316' }}>Typy míst</p>
@@ -421,49 +375,43 @@ export default function Map({ trails }: { trails: any[] }) {
         <p>🛤️ Cross-country</p>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', marginTop: '4px', paddingTop: '4px' }}>
-          <p style={{ fontWeight: 'bold', marginBottom: '2px', color: '#f97316' }}>Barvy tras</p>
-          <p><span style={{ color: '#22c55e' }}>━</span> Zelená</p>
-          <p><span style={{ color: '#3b82f6' }}>━</span> Modrá</p>
-          <p><span style={{ color: '#ef4444' }}>━</span> Červená</p>
-          <p><span style={{ color: '#9ca3af' }}>━</span> Černá</p>
-          <p><span style={{ color: '#eab308' }}>━</span> Žlutá</p>
-          <p><span style={{ color: '#f97316' }}>━</span> Oranžová</p>
-          <p><span style={{ color: '#ffffff' }}>━</span> Bílá</p>
-        </div>
-
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', marginTop: '4px', paddingTop: '4px' }}>
           <p style={{ fontWeight: 'bold', marginBottom: '2px', color: '#f97316' }}>Mapa</p>
           <p>Oranžové číslo = více trailů v oblasti</p>
         </div>
       </div>
 
       <button
+        type="button"
         onTouchEnd={(e) => {
           e.preventDefault()
           handleLocate()
         }}
         onClick={handleLocate}
         disabled={locating}
+        title="Moje poloha"
         style={{
           position: 'absolute',
-          bottom: '80px',
+          bottom: '78px',
           left: '10px',
           zIndex: 9999,
+          width: '46px',
+          height: '46px',
+          borderRadius: '9999px',
           background: locating ? '#555' : '#f97316',
           color: 'white',
-          border: '2px solid rgba(0,0,0,0.2)',
-          borderRadius: '8px',
-          padding: '10px 14px',
+          border: '3px solid white',
           fontWeight: 'bold',
-          fontSize: '14px',
+          fontSize: '20px',
           cursor: locating ? 'not-allowed' : 'pointer',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-          whiteSpace: 'nowrap',
+          boxShadow: '0 3px 12px rgba(0,0,0,0.4)',
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        {locating ? '📡 Hledám...' : '📍 Moje poloha'}
+        {locating ? '…' : '📍'}
       </button>
     </div>
   )
