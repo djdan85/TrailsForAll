@@ -13,6 +13,21 @@ const NAVBAR_HEIGHT_PX = 72
 const MAP_OVERLAY_Z_INDEX = 999999
 const CONTROL_Z_INDEX = 1000000
 
+const difficultyColor: { [key: string]: string } = {
+  zacatecnik: '#22c55e',
+  easy: '#22c55e',
+  pokrocily: '#2563eb',
+  medium: '#2563eb',
+  zkuseny: '#ef4444',
+  hard: '#ef4444',
+  zabijak: '#111827',
+  expert: '#111827',
+}
+
+const getTrailLineColor = (trail: any) => {
+  return difficultyColor[trail.skill_level || trail.difficulty] || '#f97316'
+}
+
 const createTrailIcon = (type: string, isOfficial: boolean) => {
   const color = isOfficial ? '#22c55e' : '#6b7280'
 
@@ -123,10 +138,10 @@ const trailTypeLabel: { [key: string]: string } = {
 const skillLevelLabel: { [key: string]: string } = {
   zacatecnik: '🟢 Začátečník',
   pokrocily: '🔵 Pokročilý biker',
-  zkuseny: '🟠 Zkušený biker',
+  zkuseny: '🔴 Zkušený biker',
   zabijak: '⚫ Zabijácký BIKER',
   easy: '🟢 Lehká',
-  medium: '🟡 Střední',
+  medium: '🔵 Střední',
   hard: '🔴 Těžká',
   expert: '⚫ Expert',
 }
@@ -138,6 +153,229 @@ const escapeHtml = (value: any) => {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;')
+}
+
+const parseGpxToLatLngs = (gpxText: string): [number, number][] => {
+  try {
+    const parser = new DOMParser()
+    const xml = parser.parseFromString(gpxText, 'application/xml')
+
+    const points = Array.from(xml.querySelectorAll('trkpt, rtept'))
+
+    return points
+      .map((point) => {
+        const lat = parseFloat(point.getAttribute('lat') || '')
+        const lng = parseFloat(point.getAttribute('lon') || '')
+
+        if (Number.isNaN(lat) || Number.isNaN(lng)) return null
+
+        return [lat, lng] as [number, number]
+      })
+      .filter(Boolean) as [number, number][]
+  } catch {
+    return []
+  }
+}
+
+const parseGeoJsonToLatLngs = (geojson: any): [number, number][] => {
+  try {
+    const data = typeof geojson === 'string' ? JSON.parse(geojson) : geojson
+
+    if (!data) return []
+
+    if (data.type === 'FeatureCollection') {
+      const firstLine = data.features?.find(
+        (feature: any) =>
+          feature.geometry?.type === 'LineString' ||
+          feature.geometry?.type === 'MultiLineString'
+      )
+
+      return parseGeoJsonToLatLngs(firstLine)
+    }
+
+    if (data.type === 'Feature') {
+      return parseGeoJsonToLatLngs(data.geometry)
+    }
+
+    if (data.type === 'LineString') {
+      return data.coordinates
+        .map((coord: any) => [coord[1], coord[0]] as [number, number])
+        .filter((coord: any) => !Number.isNaN(coord[0]) && !Number.isNaN(coord[1]))
+    }
+
+    if (data.type === 'MultiLineString') {
+      return data.coordinates
+        .flat()
+        .map((coord: any) => [coord[1], coord[0]] as [number, number])
+        .filter((coord: any) => !Number.isNaN(coord[0]) && !Number.isNaN(coord[1]))
+    }
+
+    return []
+  } catch {
+    return []
+  }
+}
+
+const parseCoordinatesToLatLngs = (coordinates: any): [number, number][] => {
+  try {
+    const data = typeof coordinates === 'string' ? JSON.parse(coordinates) : coordinates
+
+    if (!Array.isArray(data)) return []
+
+    return data
+      .map((coord: any) => {
+        if (Array.isArray(coord)) {
+          const first = parseFloat(coord[0])
+          const second = parseFloat(coord[1])
+
+          if (Number.isNaN(first) || Number.isNaN(second)) return null
+
+          // Jestli jsou data ve formátu [lng, lat], otočíme je.
+          if (Math.abs(first) > 50 && Math.abs(second) < 50) {
+            return [second, first] as [number, number]
+          }
+
+          return [first, second] as [number, number]
+        }
+
+        if (coord?.lat && (coord.lng || coord.lon)) {
+          const lat = parseFloat(coord.lat)
+          const lng = parseFloat(coord.lng ?? coord.lon)
+
+          if (Number.isNaN(lat) || Number.isNaN(lng)) return null
+
+          return [lat, lng] as [number, number]
+        }
+
+        return null
+      })
+      .filter(Boolean) as [number, number][]
+  } catch {
+    return []
+  }
+}
+
+const getTrailLatLngs = async (trail: any): Promise<[number, number][]> => {
+  if (trail.route_geojson || trail.geojson) {
+    const geoJsonPoints = parseGeoJsonToLatLngs(trail.route_geojson || trail.geojson)
+    if (geoJsonPoints.length > 1) return geoJsonPoints
+  }
+
+  if (trail.coordinates || trail.route_coordinates) {
+    const coordinatePoints = parseCoordinatesToLatLngs(trail.coordinates || trail.route_coordinates)
+    if (coordinatePoints.length > 1) return coordinatePoints
+  }
+
+  if (trail.gpx_data || trail.gpx) {
+    const gpxPoints = parseGpxToLatLngs(trail.gpx_data || trail.gpx)
+    if (gpxPoints.length > 1) return gpxPoints
+  }
+
+  const gpxUrl = trail.gpx_url || trail.gpx_file_url || trail.gpx_file || trail.gpx_path
+
+  if (gpxUrl) {
+    try {
+      const response = await fetch(gpxUrl)
+      const text = await response.text()
+      const gpxPoints = parseGpxToLatLngs(text)
+
+      if (gpxPoints.length > 1) return gpxPoints
+    } catch {
+      return []
+    }
+  }
+
+  return []
+}
+
+function TrailLines({ trails }: { trails: any[] }) {
+  const map = useMap()
+
+  useEffect(() => {
+    let cancelled = false
+    const lineGroup = L.layerGroup()
+
+    const renderLines = async () => {
+      for (const trail of trails) {
+        const latLngs = await getTrailLatLngs(trail)
+
+        if (cancelled) return
+        if (latLngs.length < 2) continue
+
+        const trailName = escapeHtml(trail.name)
+        const locationName = escapeHtml(trail.location_name)
+        const typeLabel = trailTypeLabel[trail.trail_type] || '🚵 Singltrek'
+        const skillLabel = skillLevelLabel[trail.skill_level || trail.difficulty] || 'Obtížnost neuvedena'
+        const length = trail.length_km ? `${escapeHtml(trail.length_km)} km` : 'Délka neuvedena'
+        const lineColor = getTrailLineColor(trail)
+
+        const polyline = L.polyline(latLngs, {
+          color: lineColor,
+          weight: 5,
+          opacity: 0.9,
+          lineCap: 'round',
+          lineJoin: 'round',
+        })
+
+        polyline.bindPopup(`
+          <div style="min-width: 180px;">
+            <h3 style="font-weight: bold; margin: 0 0 4px;">${trailName}</h3>
+            <p style="color: #888; font-size: 12px; margin: 0 0 4px;">${locationName}</p>
+            <p style="font-size: 12px; margin: 0 0 4px;">${typeLabel}</p>
+            <p style="font-size: 12px; margin: 0 0 4px;">${skillLabel} — ${length}</p>
+
+            <a
+              href="/trail/${trail.id}"
+              style="
+                display: inline-block;
+                background: #f97316;
+                color: white;
+                padding: 5px 9px;
+                border-radius: 6px;
+                margin-top: 8px;
+                cursor: pointer;
+                border: none;
+                text-decoration: none;
+                font-size: 12px;
+                font-weight: 700;
+              "
+            >
+              Zobrazit detail
+            </a>
+          </div>
+        `)
+
+        polyline.on('mouseover', () => {
+          polyline.setStyle({
+            weight: 7,
+            opacity: 1,
+          })
+        })
+
+        polyline.on('mouseout', () => {
+          polyline.setStyle({
+            weight: 5,
+            opacity: 0.9,
+          })
+        })
+
+        lineGroup.addLayer(polyline)
+      }
+
+      if (!cancelled) {
+        lineGroup.addTo(map)
+      }
+    }
+
+    renderLines()
+
+    return () => {
+      cancelled = true
+      lineGroup.remove()
+    }
+  }, [map, trails])
+
+  return null
 }
 
 function ZoomControl({ fullscreen }: { fullscreen: boolean }) {
@@ -156,44 +394,32 @@ function ZoomControl({ fullscreen }: { fullscreen: boolean }) {
         pointerEvents: 'auto',
       }}
     >
-      <button
-        type="button"
-        onClick={() => map.zoomIn()}
-        style={{
-          background: 'white',
-          border: '2px solid rgba(0,0,0,0.2)',
-          borderRadius: '8px 8px 0 0',
-          width: '34px',
-          height: '34px',
-          fontSize: '18px',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          color: '#333',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-        }}
-      >
-        +
-      </button>
+      <button type="button" onClick={() => map.zoomIn()} style={{
+        background: 'white',
+        border: '2px solid rgba(0,0,0,0.2)',
+        borderRadius: '8px 8px 0 0',
+        width: '34px',
+        height: '34px',
+        fontSize: '18px',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        color: '#333',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+      }}>+</button>
 
-      <button
-        type="button"
-        onClick={() => map.zoomOut()}
-        style={{
-          background: 'white',
-          border: '2px solid rgba(0,0,0,0.2)',
-          borderTop: 'none',
-          borderRadius: '0 0 8px 8px',
-          width: '34px',
-          height: '34px',
-          fontSize: '18px',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          color: '#333',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-        }}
-      >
-        −
-      </button>
+      <button type="button" onClick={() => map.zoomOut()} style={{
+        background: 'white',
+        border: '2px solid rgba(0,0,0,0.2)',
+        borderTop: 'none',
+        borderRadius: '0 0 8px 8px',
+        width: '34px',
+        height: '34px',
+        fontSize: '18px',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        color: '#333',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+      }}>−</button>
     </div>
   )
 }
@@ -413,6 +639,7 @@ export default function Map({ trails }: { trails: any[] }) {
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
+        <TrailLines trails={trails} />
         <TrailMarkerCluster trails={trails} />
         <UserLocationMarker coords={userLocation} />
 
@@ -421,7 +648,6 @@ export default function Map({ trails }: { trails: any[] }) {
         <MapResizeWatcher fullscreen={fullscreen} />
       </MapContainer>
 
-      {/* Tlačítko celá obrazovka / minimalizace */}
       <button
         type="button"
         onClick={() => setFullscreen((prev) => !prev)}
@@ -452,7 +678,6 @@ export default function Map({ trails }: { trails: any[] }) {
         {fullscreen ? '✕' : '⛶'}
       </button>
 
-      {/* Sbalitelná legenda */}
       <div
         style={{
           position: 'absolute',
@@ -516,7 +741,11 @@ export default function Map({ trails }: { trails: any[] }) {
                 paddingTop: '5px',
               }}
             >
-              <p style={{ fontWeight: 'bold', marginBottom: '2px', color: '#f97316' }}>Mapa</p>
+              <p style={{ fontWeight: 'bold', marginBottom: '2px', color: '#f97316' }}>Obtížnost tras</p>
+              <p>🟢 Lehká / Začátečník</p>
+              <p>🔵 Střední / Pokročilý</p>
+              <p>🔴 Těžká / Zkušený</p>
+              <p>⚫ Expert</p>
               <p>Oranžové číslo = více trailů v oblasti</p>
               {fullscreen && <p>✕ = zavřít celou obrazovku</p>}
             </div>
@@ -524,7 +753,6 @@ export default function Map({ trails }: { trails: any[] }) {
         )}
       </div>
 
-      {/* Moje poloha */}
       <button
         type="button"
         onTouchEnd={(e) => {
