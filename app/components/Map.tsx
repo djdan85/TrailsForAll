@@ -8,6 +8,8 @@ import L from 'leaflet'
 import 'leaflet.markercluster'
 import { useEffect, useState } from 'react'
 
+const CONTROL_Z_INDEX = 2147483647
+
 const createTrailIcon = (type: string, isOfficial: boolean) => {
   const color = isOfficial ? '#22c55e' : '#6b7280'
 
@@ -135,19 +137,20 @@ const escapeHtml = (value: any) => {
     .replaceAll("'", '&#039;')
 }
 
-function ZoomControl() {
+function ZoomControl({ fullscreen }: { fullscreen: boolean }) {
   const map = useMap()
 
   return (
     <div
       style={{
-        position: 'absolute',
-        bottom: '190px',
+        position: fullscreen ? 'fixed' : 'absolute',
+        bottom: fullscreen ? '150px' : '190px',
         left: '10px',
-        zIndex: 1000,
+        zIndex: CONTROL_Z_INDEX,
         display: 'flex',
         flexDirection: 'column',
         gap: '2px',
+        pointerEvents: 'auto',
       }}
     >
       <button
@@ -163,6 +166,7 @@ function ZoomControl() {
           fontWeight: 'bold',
           cursor: 'pointer',
           color: '#333',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
         }}
       >
         +
@@ -182,6 +186,7 @@ function ZoomControl() {
           fontWeight: 'bold',
           cursor: 'pointer',
           color: '#333',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
         }}
       >
         −
@@ -196,7 +201,7 @@ function MapResizeWatcher({ fullscreen }: { fullscreen: boolean }) {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       map.invalidateSize()
-    }, 250)
+    }, 300)
 
     return () => window.clearTimeout(timer)
   }, [fullscreen, map])
@@ -322,10 +327,14 @@ export default function Map({ trails }: { trails: any[] }) {
     if (!fullscreen) return
 
     const originalOverflow = document.body.style.overflow
+    const originalTouchAction = document.body.style.touchAction
+
     document.body.style.overflow = 'hidden'
+    document.body.style.touchAction = 'none'
 
     return () => {
       document.body.style.overflow = originalOverflow
+      document.body.style.touchAction = originalTouchAction
     }
   }, [fullscreen])
 
@@ -379,14 +388,19 @@ export default function Map({ trails }: { trails: any[] }) {
         inset: fullscreen ? 0 : undefined,
         height: fullscreen ? '100dvh' : '100%',
         width: fullscreen ? '100vw' : '100%',
-        zIndex: fullscreen ? 99999 : 'auto',
+        zIndex: fullscreen ? 2147483000 : 'auto',
         background: '#020617',
+        overflow: 'hidden',
       }}
     >
       <MapContainer
         center={[49.8175, 15.4730]}
         zoom={8}
-        style={{ height: '100%', width: '100%' }}
+        style={{
+          height: '100%',
+          width: '100%',
+          zIndex: 1,
+        }}
         zoomControl={false}
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -394,7 +408,7 @@ export default function Map({ trails }: { trails: any[] }) {
         <TrailMarkerCluster trails={trails} />
         <UserLocationMarker coords={userLocation} />
 
-        <ZoomControl />
+        <ZoomControl fullscreen={fullscreen} />
         <FlyToLocation coords={userLocation} />
         <MapResizeWatcher fullscreen={fullscreen} />
       </MapContainer>
@@ -405,10 +419,10 @@ export default function Map({ trails }: { trails: any[] }) {
         onClick={() => setFullscreen((prev) => !prev)}
         title={fullscreen ? 'Zavřít celou obrazovku' : 'Zobrazit na celou obrazovku'}
         style={{
-          position: 'absolute',
+          position: fullscreen ? 'fixed' : 'absolute',
           bottom: fullscreen ? '84px' : '136px',
           left: '10px',
-          zIndex: 9999,
+          zIndex: CONTROL_Z_INDEX,
           width: fullscreen ? '42px' : '46px',
           height: fullscreen ? '42px' : '46px',
           borderRadius: fullscreen ? '12px' : '9999px',
@@ -424,6 +438,7 @@ export default function Map({ trails }: { trails: any[] }) {
           justifyContent: 'center',
           touchAction: 'manipulation',
           WebkitTapHighlightColor: 'transparent',
+          pointerEvents: 'auto',
         }}
       >
         {fullscreen ? '✕' : '⛶'}
@@ -432,16 +447,17 @@ export default function Map({ trails }: { trails: any[] }) {
       {/* Sbalitelná legenda */}
       <div
         style={{
-          position: 'absolute',
+          position: fullscreen ? 'fixed' : 'absolute',
           top: '10px',
           right: '10px',
-          zIndex: 1000,
+          zIndex: CONTROL_Z_INDEX,
           background: 'rgba(0,0,0,0.78)',
           borderRadius: '12px',
           color: 'white',
           overflow: 'hidden',
           boxShadow: '0 3px 12px rgba(0,0,0,0.35)',
           maxWidth: fullscreen ? '190px' : '170px',
+          pointerEvents: 'auto',
         }}
       >
         <button
@@ -511,10 +527,10 @@ export default function Map({ trails }: { trails: any[] }) {
         disabled={locating}
         title="Moje poloha"
         style={{
-          position: 'absolute',
+          position: fullscreen ? 'fixed' : 'absolute',
           bottom: fullscreen ? '24px' : '78px',
           left: '10px',
-          zIndex: 9999,
+          zIndex: CONTROL_Z_INDEX,
           width: '46px',
           height: '46px',
           borderRadius: '9999px',
@@ -530,6 +546,7 @@ export default function Map({ trails }: { trails: any[] }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          pointerEvents: 'auto',
         }}
       >
         {locating ? '…' : '📍'}
