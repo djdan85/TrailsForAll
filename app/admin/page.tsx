@@ -833,8 +833,28 @@ export default function Admin() {
                         </p>
                       </div>
 
-                      {/* Poloha se zobrazuje jen pokud trail nemá GPX */}
-                      {!editingTrail.gpx_url && (
+                      {/* GPX preview — když má trail GPX, ruční mapa se vůbec nezobrazuje */}
+                      {editingTrail.gpx_url ? (
+                        <div>
+                          <label className="text-gray-400 text-xs mb-2 block">Preview GPX trasy</label>
+
+                          <div style={{ height: '220px', borderRadius: '12px', overflow: 'hidden' }}>
+                            <TrailMap
+                              key={gpxPreviewKey}
+                              lat={parseFloat(editingTrail.lat)}
+                              lng={parseFloat(editingTrail.lng)}
+                              name={editingTrail.name}
+                              isOfficial={editingTrail.is_official}
+                              gpxUrl={editingTrail.gpx_url}
+                              gpxColor={editingTrail.gpx_color || DEFAULT_TRAIL_COLOR}
+                            />
+                          </div>
+
+                          <p className="text-gray-600 text-xs mt-1">
+                            Start trasy je převzatý z GPX souboru. Ruční výběr polohy se proto nezobrazuje.
+                          </p>
+                        </div>
+                      ) : (
                         <div>
                           <label className="text-gray-400 text-xs mb-1 block">Poloha startu — klikni na mapu</label>
 
@@ -854,29 +874,6 @@ export default function Admin() {
                               📍 {editRoutePoints[0][0].toFixed(5)}, {editRoutePoints[0][1].toFixed(5)}
                             </p>
                           )}
-                        </div>
-                      )}
-
-                      {/* GPX preview — jen když má trail GPX */}
-                      {editingTrail.gpx_url && (
-                        <div>
-                          <label className="text-gray-400 text-xs mb-2 block">Preview GPX trasy</label>
-
-                          <div style={{ height: '220px', borderRadius: '12px', overflow: 'hidden' }}>
-                            <TrailMap
-                              key={gpxPreviewKey}
-                              lat={parseFloat(editingTrail.lat)}
-                              lng={parseFloat(editingTrail.lng)}
-                              name={editingTrail.name}
-                              isOfficial={editingTrail.is_official}
-                              gpxUrl={editingTrail.gpx_url}
-                              gpxColor={editingTrail.gpx_color || DEFAULT_TRAIL_COLOR}
-                            />
-                          </div>
-
-                          <p className="text-gray-600 text-xs mt-1">
-                            Start trasy je převzatý z GPX souboru. Ruční výběr polohy se proto nezobrazuje.
-                          </p>
                         </div>
                       )}
 
