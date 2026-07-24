@@ -8,6 +8,20 @@ import { riderDisciplines, type RiderDiscipline } from '../components/RiderIcon'
 
 const inputClass = 'w-full rounded-xl bg-gray-800 px-4 py-3 text-white outline-none transition focus:ring-2 focus:ring-orange-500'
 
+type ProfileForm = {
+  username: string
+  full_name: string
+  city: string
+  birth_year: string
+  rider_level: string
+  disciplines: RiderDiscipline[]
+  equipment_text: string
+  bio: string
+  strava_url: string
+  instagram_url: string
+  show_in_community: boolean
+}
+
 export default function Profile() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -16,13 +30,13 @@ export default function Profile() {
   const [deleting, setDeleting] = useState(false)
   const [message, setMessage] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<ProfileForm>({
     username: '',
     full_name: '',
     city: '',
     birth_year: '',
     rider_level: 'beginner',
-    primary_discipline: 'mtb' as RiderDiscipline,
+    disciplines: [],
     equipment_text: '',
     bio: '',
     strava_url: '',
@@ -42,13 +56,22 @@ export default function Profile() {
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', userData.user.id).single()
 
       if (profile) {
+        const savedDisciplines = Array.isArray(profile.disciplines)
+          ? profile.disciplines.filter(
+              (discipline: string): discipline is RiderDiscipline =>
+                riderDisciplines.includes(discipline as RiderDiscipline),
+            )
+          : profile.primary_discipline && riderDisciplines.includes(profile.primary_discipline as RiderDiscipline)
+            ? [profile.primary_discipline as RiderDiscipline]
+            : []
+
         setForm({
           username: profile.username || '',
           full_name: profile.full_name || '',
           city: profile.city || '',
-          birth_year: profile.birth_year || '',
+          birth_year: profile.birth_year ? String(profile.birth_year) : '',
           rider_level: profile.rider_level || 'beginner',
-          primary_discipline: (profile.primary_discipline || 'mtb') as RiderDiscipline,
+          disciplines: savedDisciplines,
           equipment_text: profile.equipment_text || '',
           bio: profile.bio || '',
           strava_url: profile.strava_url || '',
@@ -61,6 +84,15 @@ export default function Profile() {
 
     getData()
   }, [router])
+
+  const toggleDiscipline = (discipline: RiderDiscipline) => {
+    setForm(currentForm => ({
+      ...currentForm,
+      disciplines: currentForm.disciplines.includes(discipline)
+        ? currentForm.disciplines.filter(item => item !== discipline)
+        : [...currentForm.disciplines, discipline],
+    }))
+  }
 
   const handleSave = async () => {
     if (!form.username.trim()) {
@@ -76,9 +108,10 @@ export default function Profile() {
       username: form.username.trim(),
       full_name: form.full_name.trim() || null,
       city: form.city.trim() || null,
-      birth_year: form.birth_year ? parseInt(form.birth_year) : null,
+      birth_year: form.birth_year ? parseInt(form.birth_year, 10) : null,
       rider_level: form.rider_level,
-      primary_discipline: form.primary_discipline,
+      disciplines: form.disciplines,
+      primary_discipline: form.disciplines[0] || 'mtb',
       equipment_text: form.equipment_text.trim() || null,
       bio: form.bio.trim() || null,
       strava_url: form.strava_url.trim() || null,
@@ -148,10 +181,16 @@ export default function Profile() {
 
           <div className="mt-3 rounded-3xl border border-slate-800 bg-slate-950/45 p-4 sm:p-6">
             <h2 className="text-2xl font-bold text-white">Jezdecký profil</h2>
-            <p className="mt-1 text-sm text-slate-400">Vyber disciplínu, kterou jezdíš nejčastěji.</p>
+            <p className="mt-1 text-sm text-slate-400">Vyber všechny disciplíny, které jezdíš. Počet není omezen.</p>
+            <p className="mt-2 text-sm font-medium text-orange-400">Vybráno: {form.disciplines.length}</p>
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {riderDisciplines.map(discipline => (
-                <DisciplineCard key={discipline} discipline={discipline} selected={form.primary_discipline === discipline} onSelect={primary_discipline => setForm({ ...form, primary_discipline })} />
+                <DisciplineCard
+                  key={discipline}
+                  discipline={discipline}
+                  selected={form.disciplines.includes(discipline)}
+                  onSelect={() => toggleDiscipline(discipline)}
+                />
               ))}
             </div>
           </div>
