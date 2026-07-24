@@ -32,8 +32,9 @@ export default function Home() {
       today.setDate(today.getDate() - 1)
       const { data: membersData } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, username, city, created_at')
         .eq('show_in_community', true)
+        .not('username', 'is', null)
         .gte('created_at', today.toISOString())
         .order('created_at', { ascending: false })
         .limit(5)
@@ -57,20 +58,17 @@ export default function Home() {
 
   return (
     <main className="w-full flex flex-col">
-
-      {/* Mapa */}
       <div className="w-full mt-16 bg-gray-950" style={{ position: 'relative', zIndex: 0, padding: '20px 10%' }}>
         <div style={{ height: '500px', width: '100%', borderRadius: '16px', overflow: 'hidden' }}>
           <Map trails={trails} />
         </div>
       </div>
 
-      {/* Noví členové */}
       {newMembers.length > 0 && (
         <div className="bg-gray-900 px-4 py-6" style={{ position: 'relative', zIndex: 1 }}>
           <div className="max-w-5xl mx-auto">
             <h2 className="text-xl font-bold text-white mb-1">Vítáme nové členy!</h2>
-            <p className="text-gray-400 text-sm mb-4">Nový BIKEŘI za posledních 24 hodin.</p>
+            <p className="text-gray-400 text-sm mb-4">Noví bikeři, kteří se rozhodli zveřejnit svůj profil.</p>
             <div className="flex gap-3 flex-wrap">
               {newMembers.map((member) => (
                 <div
@@ -78,12 +76,8 @@ export default function Home() {
                   onClick={() => router.push('/komunita')}
                   className="bg-gray-800 rounded-xl px-4 py-3 cursor-pointer hover:bg-gray-700 transition"
                 >
-                  <p className="text-white font-semibold text-sm">
-                    {member.username || member.email?.split('@')[0]}
-                  </p>
-                  {member.city && (
-                    <p className="text-gray-400 text-xs">{member.city}</p>
-                  )}
+                  <p className="text-white font-semibold text-sm">{member.username}</p>
+                  {member.city && <p className="text-gray-400 text-xs">{member.city}</p>}
                 </div>
               ))}
             </div>
@@ -91,7 +85,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Populární traily */}
       <div className="bg-gray-950 px-4 py-8" style={{ position: 'relative', zIndex: 1 }}>
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl font-bold text-white mb-2">Populární traily</h2>
@@ -113,9 +106,7 @@ export default function Home() {
                   <h3 className="text-white font-bold text-lg mb-1">{trail.name}</h3>
                   <p className="text-gray-400 text-sm mb-2">{trail.location_name}</p>
                   <div className="flex gap-3 text-sm">
-                    <span className="text-orange-500 font-semibold">
-                      {difficultyLabel[trail.difficulty]}
-                    </span>
+                    <span className="text-orange-500 font-semibold">{difficultyLabel[trail.difficulty]}</span>
                     <span className="text-gray-400">{trail.length_km} km</span>
                   </div>
                 </div>
@@ -134,23 +125,18 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Nejlepší recenze */}
       <div className="bg-gray-900 px-4 py-8" style={{ position: 'relative', zIndex: 1 }}>
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl font-bold text-white mb-2">Nejnovější recenze</h2>
           <p className="text-gray-400 mb-6">Co říkají bikeři o trailech.</p>
 
-          {reviews.length === 0 && (
-            <p className="text-gray-400">Zatím žádné recenze.</p>
-          )}
+          {reviews.length === 0 && <p className="text-gray-400">Zatím žádné recenze.</p>}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {reviews.map((review) => (
               <div key={review.id} className="bg-gray-800 rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-orange-500 font-semibold text-lg">
-                    {'⭐'.repeat(review.rating)}
-                  </span>
+                  <span className="text-orange-500 font-semibold text-lg">{'⭐'.repeat(review.rating)}</span>
                   <span className="text-gray-500 text-xs">
                     {new Date(review.created_at).toLocaleDateString('cs-CZ')}
                   </span>
@@ -162,15 +148,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* CTA sekce */}
       <div className="bg-gray-950 px-4 py-12 text-center" style={{ position: 'relative', zIndex: 1 }}>
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-bold text-white mb-4">
-            Znáš skvělý trail?
-          </h2>
-          <p className="text-gray-400 mb-8">
-            Přidej ho do naší databáze a sdílej ho s komunitou bikerů.
-          </p>
+          <h2 className="text-3xl font-bold text-white mb-4">Znáš skvělý trail?</h2>
+          <p className="text-gray-400 mb-8">Přidej ho do naší databáze a sdílej ho s komunitou bikerů.</p>
           <button
             onClick={() => router.push('/add-trail')}
             className="bg-orange-500 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-orange-600 transition"
@@ -179,8 +160,6 @@ export default function Home() {
           </button>
         </div>
       </div>
-
     </main>
   )
 }
-
