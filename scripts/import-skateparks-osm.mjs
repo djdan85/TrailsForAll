@@ -32,10 +32,11 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function buildQuery(bbox) {
   return `[out:json][timeout:60];
+area["ISO3166-1"="CZ"][admin_level="2"]->.cz;
 (
-  nwr["leisure"="skate_park"](${bbox});
-  nwr["leisure"="skatepark"](${bbox});
-  nwr["leisure"="pitch"]["sport"~"(^|;)skateboard(;|$)"](${bbox});
+  nwr["leisure"="skate_park"](area.cz)(${bbox});
+  nwr["leisure"="skatepark"](area.cz)(${bbox});
+  nwr["leisure"="pitch"]["sport"~"(^|;)skateboard(;|$)"](area.cz)(${bbox});
 );
 out center tags;`
 }
