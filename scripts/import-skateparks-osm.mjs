@@ -24,6 +24,7 @@ const regions = [
 const overpassEndpoints = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
   'https://overpass.nchc.org.tw/api/interpreter',
 ]
 
@@ -50,32 +51,43 @@ function splitBbox([south, west, north, east]) {
   ]
 }
 
-async function fetchTile(label, bbox) {
+async function fetchTileOnce(label, bbox) {
   const bboxString = bbox.join(',')
   const body = new URLSearchParams({ data: buildQuery(bboxString) })
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    for (const endpoint of overpassEndpoints) {
-      try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
-            'user-agent': 'TrailsForAll skatepark importer',
-          },
-          body,
-        })
+  for (const endpoint of overpassEndpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          'user-agent': 'TrailsForAll skatepark importer',
+        },
+        body,
+      })
 
-        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
-        const data = await response.json()
-        return data.elements ?? []
-      } catch (error) {
-        console.warn(`${label}: endpoint ${endpoint} selhal: ${error.message}`)
-        await sleep(1200)
-      }
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
+      const data = await response.json()
+      return data.elements ?? []
+    } catch (error) {
+      console.warn(`${label}: endpoint ${endpoint} selhal: ${error.message}`)
+      await sleep(2500)
     }
+  }
 
-    await sleep(3000)
+  return null
+}
+
+async function fetchTile(label, bbox) {
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    const elements = await fetchTileOnce(label, bbox)
+    if (elements) return elements
+
+    if (attempt < 4) {
+      const pauseSeconds = attempt * 15
+      console.warn(`${label}: všechny servery selhaly, další pokus za ${pauseSeconds} s.`)
+      await sleep(pauseSeconds * 1000)
+    }
   }
 
   throw new Error(`Nepodařilo se stáhnout dlaždici ${label}.`)
@@ -90,7 +102,7 @@ async function fetchRegion(region) {
     const tileElements = await fetchTile(label, tiles[index])
     elements.push(...tileElements)
     console.log(`${label}: ${tileElements.length} prvků`)
-    await sleep(1800)
+    await sleep(5000)
   }
 
   console.log(`${region.name}: celkem ${elements.length} prvků`)
