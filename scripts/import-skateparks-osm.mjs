@@ -15,19 +15,22 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 })
 
 const regions = [
-  { name: 'severozapad', bbox: '49.75,12.00,51.10,15.55' },
-  { name: 'severovychod', bbox: '49.75,15.40,51.10,18.90' },
-  { name: 'jihozapad', bbox: '48.50,12.00,49.85,15.55' },
-  { name: 'jihovychod', bbox: '48.50,15.40,49.85,18.90' },
+  { name: 'severozapad', bbox: [49.75, 12.0, 51.1, 15.55] },
+  { name: 'severovychod', bbox: [49.75, 15.4, 51.1, 18.9] },
+  { name: 'jihozapad', bbox: [48.5, 12.0, 49.85, 15.55] },
+  { name: 'jihovychod', bbox: [48.5, 15.4, 49.85, 18.9] },
 ]
 
 const overpassEndpoints = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.nchc.org.tw/api/interpreter',
 ]
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 function buildQuery(bbox) {
-  return `[out:json][timeout:120];
+  return `[out:json][timeout:60];
 (
   nwr["leisure"="skate_park"](${bbox});
   nwr["leisure"="skatepark"](${bbox});
@@ -36,30 +39,62 @@ function buildQuery(bbox) {
 out center tags;`
 }
 
-async function fetchRegion(region) {
-  const body = new URLSearchParams({ data: buildQuery(region.bbox) })
+function splitBbox([south, west, north, east]) {
+  const midLat = (south + north) / 2
+  const midLng = (west + east) / 2
+  return [
+    [south, west, midLat, midLng],
+    [south, midLng, midLat, east],
+    [midLat, west, north, midLng],
+    [midLat, midLng, north, east],
+  ]
+}
 
-  for (const endpoint of overpassEndpoints) {
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
-          'user-agent': 'TrailsForAll skatepark importer',
-        },
-        body,
-      })
+async function fetchTile(label, bbox) {
+  const bboxString = bbox.join(',')
+  const body = new URLSearchParams({ data: buildQuery(bboxString) })
 
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
-      const data = await response.json()
-      console.log(`${region.name}: ${data.elements?.length ?? 0} prvků`)
-      return data.elements ?? []
-    } catch (error) {
-      console.warn(`${region.name}: endpoint ${endpoint} selhal: ${error.message}`)
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    for (const endpoint of overpassEndpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/x-www-form-urlencoded;charset=UTF-8',
+            'user-agent': 'TrailsForAll skatepark importer',
+          },
+          body,
+        })
+
+        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`)
+        const data = await response.json()
+        return data.elements ?? []
+      } catch (error) {
+        console.warn(`${label}: endpoint ${endpoint} selhal: ${error.message}`)
+        await sleep(1200)
+      }
     }
+
+    await sleep(3000)
   }
 
-  throw new Error(`Nepodařilo se stáhnout oblast ${region.name}.`)
+  throw new Error(`Nepodařilo se stáhnout dlaždici ${label}.`)
+}
+
+async function fetchRegion(region) {
+  const tiles = splitBbox(region.bbox)
+  const elements = []
+
+  for (let index = 0; index < tiles.length; index += 1) {
+    const label = `${region.name} ${index + 1}/4`
+    const tileElements = await fetchTile(label, tiles[index])
+    elements.push(...tileElements)
+    console.log(`${label}: ${tileElements.length} prvků`)
+    await sleep(1800)
+  }
+
+  console.log(`${region.name}: celkem ${elements.length} prvků`)
+  return elements
 }
 
 function normalizeElement(element) {
@@ -160,7 +195,6 @@ async function main() {
   const allElements = []
   for (const region of regions) {
     allElements.push(...(await fetchRegion(region)))
-    await new Promise((resolve) => setTimeout(resolve, 1500))
   }
 
   const normalized = allElements.map(normalizeElement).filter(Boolean)
