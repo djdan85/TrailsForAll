@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "import:skateparks": "node scripts/import-skateparks-osm.mjs"
+    "import:skateparks": "node scripts/import-skateparks-osm.mjs",
+    "update:skatepark-names": "node scripts/update-skatepark-names.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
