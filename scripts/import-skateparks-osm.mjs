@@ -90,18 +90,25 @@ async function fetchTile(label, bbox) {
     }
   }
 
-  throw new Error(`Nepodařilo se stáhnout dlaždici ${label}.`)
+  console.warn(`${label}: dlaždici se nepodařilo stáhnout, import pokračuje bez ní.`)
+  return null
 }
 
-async function fetchRegion(region) {
+async function fetchRegion(region, failedTiles) {
   const tiles = splitBbox(region.bbox)
   const elements = []
 
   for (let index = 0; index < tiles.length; index += 1) {
     const label = `${region.name} ${index + 1}/4`
     const tileElements = await fetchTile(label, tiles[index])
-    elements.push(...tileElements)
-    console.log(`${label}: ${tileElements.length} prvků`)
+
+    if (tileElements === null) {
+      failedTiles.push(label)
+    } else {
+      elements.push(...tileElements)
+      console.log(`${label}: ${tileElements.length} prvků`)
+    }
+
     await sleep(5000)
   }
 
@@ -205,8 +212,14 @@ async function insertBatches(rows) {
 
 async function main() {
   const allElements = []
+  const failedTiles = []
+
   for (const region of regions) {
-    allElements.push(...(await fetchRegion(region)))
+    allElements.push(...(await fetchRegion(region, failedTiles)))
+  }
+
+  if (allElements.length === 0) {
+    throw new Error('Nepodařilo se stáhnout žádné skateparky.')
   }
 
   const normalized = allElements.map(normalizeElement).filter(Boolean)
@@ -219,6 +232,12 @@ async function main() {
   console.log(`Po odstranění duplicit: ${deduplicated.length}`)
   console.log(`Již existuje: ${deduplicated.length - newRows.length}`)
   console.log(`K importu: ${newRows.length}`)
+
+  if (failedTiles.length > 0) {
+    console.warn(`Chybějící dlaždice (${failedTiles.length}): ${failedTiles.join(', ')}`)
+  } else {
+    console.log('Všechny dlaždice byly staženy.')
+  }
 
   if (DRY_RUN) {
     console.log('DRY_RUN je zapnutý. Do databáze se nic nezapsalo.')
