@@ -18,6 +18,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const regionAliases = new Map([
   ['Hlavní město Praha', 'Hlavní město Praha'],
   ['Praha', 'Hlavní město Praha'],
+  ['Praha, hlavní město', 'Hlavní město Praha'],
   ['Středočeský kraj', 'Středočeský kraj'],
   ['Jihočeský kraj', 'Jihočeský kraj'],
   ['Plzeňský kraj', 'Plzeňský kraj'],
@@ -55,9 +56,26 @@ async function reverseGeocode(lat, lng) {
 }
 
 function pickRegion(address = {}) {
-  const raw = address.state || address.region || null
-  if (!raw) return null
-  return regionAliases.get(String(raw).trim()) || null
+  const candidates = [
+    address.state,
+    address.region,
+    address.state_district,
+    address.city,
+    address.municipality,
+  ]
+
+  for (const value of candidates) {
+    if (!value) continue
+    const normalized = String(value).trim()
+    const mapped = regionAliases.get(normalized)
+    if (mapped) return mapped
+
+    if (/^(hlavní město )?praha$/i.test(normalized) || /praha,\s*hlavní město/i.test(normalized)) {
+      return 'Hlavní město Praha'
+    }
+  }
+
+  return null
 }
 
 async function main() {
