@@ -9,7 +9,8 @@
     "lint": "eslint",
     "import:skateparks": "node scripts/import-skateparks-osm.mjs",
     "update:skatepark-names": "node scripts/update-skatepark-names.mjs",
-    "update:skatepark-names:skatespoty": "node scripts/update-skatepark-names-skatespoty.mjs"
+    "update:skatepark-names:skatespoty": "node scripts/update-skatepark-names-skatespoty.mjs",
+    "update:skatepark-regions": "node scripts/update-skatepark-regions.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
